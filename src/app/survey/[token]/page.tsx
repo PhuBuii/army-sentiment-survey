@@ -2,6 +2,7 @@ import { validateTokenAndGetQuestions } from "@/app/actions/survey-actions";
 import SurveyForm from "@/components/survey/SurveyForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function SurveyPage({
   params,
@@ -29,8 +30,11 @@ export default async function SurveyPage({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#0c1109] via-[#1a2315] to-[#0a0f08] selection:bg-[#a3e635] selection:text-black">
-      <div className="w-full max-w-3xl">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-gradient-to-br dark:from-[#0c1109] dark:via-[#1a2315] dark:to-[#0a0f08] selection:bg-emerald-500 dark:selection:bg-[#a3e635] selection:text-white dark:selection:text-black transition-colors duration-300 relative">
+      <div className="absolute top-4 right-4 z-50">
+         <ThemeToggle />
+      </div>
+      <div className="w-full max-w-3xl z-10">
         <SurveyForm soldier={data.soldier} questions={data.questions} />
       </div>
     </div>
