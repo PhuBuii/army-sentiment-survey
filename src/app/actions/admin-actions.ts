@@ -41,19 +41,50 @@ export async function updateSubmissionStatus(
   return { success: true };
 }
 
+export async function markSubmissionResolved(
+  submissionId: string,
+  isResolved: boolean,
+  adminNote?: string
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("submissions")
+    .update({
+      is_resolved: isResolved,
+      ...(adminNote !== undefined ? { admin_note: adminNote } : {}),
+    })
+    .eq("id", submissionId);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
 // ── Admin account management ─────────────────────────────────────────────────
 export async function listAdminUsers() {
   try {
     const supabaseAdmin = getAdminClient();
     const { data, error } = await supabaseAdmin.auth.admin.listUsers();
     if (error) return { error: error.message, users: [] };
-    return { users: data.users ?? [] };
+    
+    const { data: profiles } = await supabaseAdmin.from("admin_profiles").select("*");
+    
+    // Merge Auth Users with Roles
+    const mergedUsers = data.users.map((u) => {
+      const p = profiles?.find((profile) => profile.id === u.id);
+      return {
+        ...u,
+        role: p?.role || "super_admin",
+        assigned_unit: p?.assigned_unit || null
+      };
+    });
+
+    return { users: mergedUsers ?? [] };
   } catch (err: any) {
     return { error: err.message, users: [] };
   }
 }
 
-export async function createAdminUser(email: string, password: string) {
+export async function createAdminUser(email: string, password: string, role: string = 'super_admin', assignedUnit?: string) {
   try {
     const supabaseAdmin = getAdminClient();
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -62,6 +93,16 @@ export async function createAdminUser(email: string, password: string) {
       email_confirm: true,
     });
     if (error) return { error: error.message };
+
+    // Create the RBAC profile mapping
+    if (data?.user?.id) {
+       await supabaseAdmin.from("admin_profiles").insert({
+         id: data.user.id,
+         role: role,
+         assigned_unit: assignedUnit || null
+       });
+    }
+
     return { success: true, user: data.user };
   } catch (err: any) {
     return { error: err.message };

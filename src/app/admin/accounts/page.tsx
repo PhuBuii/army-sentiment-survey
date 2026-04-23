@@ -25,6 +25,8 @@ type AdminUser = {
   email?: string;
   created_at: string;
   last_sign_in_at?: string | null;
+  role?: string;
+  assigned_unit?: string | null;
 };
 
 export default function AccountsPage() {
@@ -36,6 +38,8 @@ export default function AccountsPage() {
   const [createOpen, setCreateOpen]     = useState(false);
   const [newEmail, setNewEmail]         = useState("");
   const [newPassword, setNewPassword]   = useState("");
+  const [newRole, setNewRole]           = useState("super_admin");
+  const [newUnit, setNewUnit]           = useState("");
   const [creating, setCreating]         = useState(false);
   const [createError, setCreateError]   = useState("");
 
@@ -71,11 +75,13 @@ export default function AccountsPage() {
   const handleCreate = async () => {
     if (!newEmail || !newPassword) { setCreateError("Vui lòng điền đầy đủ thông tin."); return; }
     if (newPassword.length < 6) { setCreateError("Mật khẩu tối thiểu 6 ký tự."); return; }
+    if (newRole === "unit_admin" && !newUnit) { setCreateError("Vui lòng điền Đơn vị được uỷ quyền."); return; }
+    
     setCreating(true); setCreateError("");
-    const res = await createAdminUser(newEmail, newPassword);
+    const res = await createAdminUser(newEmail, newPassword, newRole, newUnit);
     setCreating(false);
     if (res.error) { setCreateError(res.error); return; }
-    setCreateOpen(false); setNewEmail(""); setNewPassword("");
+    setCreateOpen(false); setNewEmail(""); setNewPassword(""); setNewRole("super_admin"); setNewUnit("");
     fetchUsers();
   };
 
@@ -155,7 +161,7 @@ export default function AccountsPage() {
           </p>
         </div>
         <Button
-          onClick={() => { setCreateOpen(true); setCreateError(""); setNewEmail(""); setNewPassword(""); }}
+          onClick={() => { setCreateOpen(true); setCreateError(""); setNewEmail(""); setNewPassword(""); setNewRole("super_admin"); setNewUnit(""); }}
           className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 shadow-md"
         >
           <UserPlus className="w-4 h-4" /> Tạo tài khoản mới
@@ -185,6 +191,7 @@ export default function AccountsPage() {
                 <TableRow className="bg-slate-50/50 dark:bg-white/5 border-slate-100 dark:border-white/5">
                   <TableHead className="w-12 text-center py-3">STT</TableHead>
                   <TableHead className="py-3">Email</TableHead>
+                  <TableHead>Quyền hạn</TableHead>
                   <TableHead>Ngày tạo</TableHead>
                   <TableHead>Đăng nhập lần cuối</TableHead>
                   <TableHead className="text-right">Thao tác</TableHead>
@@ -210,11 +217,21 @@ export default function AccountsPage() {
                     </TableCell>
                     <TableCell className="font-medium text-slate-900 dark:text-slate-200 text-sm">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-purple-50 dark:bg-purple-500/15 border border-purple-100 dark:border-purple-500/30 flex items-center justify-center shrink-0">
-                          <ShieldCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${u.role === 'unit_admin' ? 'bg-sky-50 dark:bg-sky-500/15 border-sky-100 dark:border-sky-500/30' : 'bg-purple-50 dark:bg-purple-500/15 border-purple-100 dark:border-purple-500/30'}`}>
+                          <ShieldCheck className={`w-3.5 h-3.5 ${u.role === 'unit_admin' ? 'text-sky-600 dark:text-sky-400' : 'text-purple-600 dark:text-purple-400'}`} />
                         </div>
                         {u.email ?? "—"}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {u.role === "super_admin" ? (
+                         <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400 px-2 py-1 rounded-md font-semibold">Super Admin</span>
+                      ) : (
+                         <div className="flex flex-col gap-1">
+                           <span className="text-xs bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-400 px-2 py-1 rounded-md font-semibold w-fit">Unit Admin</span>
+                           <span className="text-[10px] text-slate-500">{u.assigned_unit}</span>
+                         </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-slate-500 dark:text-slate-400 text-xs">
                       {new Date(u.created_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}
@@ -290,6 +307,29 @@ export default function AccountsPage() {
                 className="dark:bg-[#111] dark:border-white/15 dark:text-white"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm text-slate-700 dark:text-slate-300">Phân quyền</Label>
+              <select
+                value={newRole}
+                onChange={e => setNewRole(e.target.value)}
+                className="w-full bg-white dark:bg-[#111] border border-slate-200 dark:border-white/15 rounded-md px-3 py-2 text-sm text-slate-800 dark:text-slate-200 outline-none focus:border-purple-500"
+              >
+                <option value="super_admin">Ban Quản trị (Super Admin) - Toàn quyền Sư đoàn</option>
+                <option value="unit_admin">Quản lý Đơn vị (Unit Admin) - Giới hạn dữ liệu Đại đội</option>
+              </select>
+            </div>
+            
+            {newRole === "unit_admin" && (
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+                <Label className="text-sm text-slate-700 dark:text-slate-300">Nhập chính xác cấp Đơn vị uỷ quyền</Label>
+                <Input
+                  type="text" placeholder="Ví dụ: Đại đội 1" value={newUnit}
+                  onChange={e => setNewUnit(e.target.value)}
+                  className="dark:bg-[#111] dark:border-white/15 dark:text-white"
+                />
+                <p className="text-[10px] text-slate-500">Tên đơn vị phải khớp với tên trong danh sách chiến sĩ tải lên.</p>
+              </div>
+            )}
             {createError && (
               <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg px-3 py-2 border border-red-100 dark:border-red-900/50">
                 {createError}

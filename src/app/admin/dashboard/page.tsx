@@ -19,9 +19,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase/client";
-import { Loader2, TrendingUp, Users, Target, Activity, ArrowRight } from "lucide-react";
+import { markSubmissionResolved } from "@/app/actions/admin-actions";
+import { exportElementToPDF } from "@/lib/export-pdf";
+import { Loader2, TrendingUp, Users, Target, Activity, ArrowRight, ShieldAlert, ShieldCheck, Printer } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { toast } from "sonner";
 import Link from "next/link";
 import { Pagination } from "@/components/ui/pagination";
 import { useSearchParams } from "next/navigation";
@@ -32,6 +36,8 @@ type Submission = {
   ai_status: string;
   ai_summary: string;
   ai_advice: string;
+  is_resolved?: boolean;
+  admin_note?: string;
   created_at: string;
 };
 
@@ -57,10 +63,15 @@ export default function AdminDashboard() {
   
   const [selectedSoldier, setSelectedSoldier] = useState<Soldier | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [resolving, setResolving] = useState(false);
+
+  // Filter states
+  const [units, setUnits] = useState<string[]>([]);
+  const [selectedUnit, setSelectedUnit] = useState<string>("all");
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [selectedUnit]);
 
   const fetchDashboardData = async () => {
     try {
@@ -74,14 +85,22 @@ export default function AdminDashboard() {
       if (error) throw error;
       
       const soldiersData = data as Soldier[] || [];
-      const total = soldiersData.length;
-      const completed = soldiersData.filter(s => s.is_completed).length;
+      
+      // Extract unique units
+      const uniqueUnits = Array.from(new Set(soldiersData.map(s => s.unit))).filter(Boolean);
+      setUnits(uniqueUnits);
+
+      // Perform filtering
+      const filteredSoldiersData = selectedUnit === "all" ? soldiersData : soldiersData.filter(s => s.unit === selectedUnit);
+
+      const total = filteredSoldiersData.length;
+      const completed = filteredSoldiersData.filter(s => s.is_completed).length;
       
       // Calculate chart data and warning stats
       const statusCounts: Record<string, number> = {};
       let warningCount = 0;
       
-      soldiersData.filter(s => s.is_completed && s.submissions && s.submissions.length > 0).forEach(s => {
+      filteredSoldiersData.filter(s => s.is_completed && s.submissions && s.submissions.length > 0).forEach(s => {
         const status = s.submissions![0].ai_status;
         statusCounts[status] = (statusCounts[status] || 0) + 1;
         if (status === "Nguy cơ") warningCount++;
@@ -94,7 +113,7 @@ export default function AdminDashboard() {
       })));
 
       // Get all completed soldiers to allow pagination
-      const recent = [...soldiersData]
+      const recent = [...filteredSoldiersData]
         .filter(s => s.is_completed && s.submissions && s.submissions.length > 0)
         .sort((a, b) => new Date(b.submissions![0].created_at).getTime() - new Date(a.submissions![0].created_at).getTime());
 
@@ -124,15 +143,53 @@ export default function AdminDashboard() {
     setIsDialogOpen(true);
   };
 
+  const handleToggleResolved = async (checked: boolean) => {
+    if (!selectedSoldier?.submissions?.[0]) return;
+    const sub = selectedSoldier.submissions[0];
+    setResolving(true);
+    
+    const res = await markSubmissionResolved(sub.id, checked);
+    setResolving(false);
+    
+    if (res.error) {
+       toast.error("Lỗi cập nhật: " + res.error);
+    } else {
+       toast.success(checked ? "Đã đánh dấu hoàn tất xử lý tư tưởng." : "Đã huỷ đánh dấu xử lý.");
+       // Update local state gently
+       const updatedSoldier = { ...selectedSoldier, submissions: [{ ...sub, is_resolved: checked }] };
+       setSelectedSoldier(updatedSoldier);
+       // Also update the list under the hood
+       const newList = recentSoldiers.map(s => s.id === updatedSoldier.id ? updatedSoldier : s);
+       setRecentSoldiers(newList);
+    }
+  };
+
   if (loading) {
     return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600 dark:text-[#a3e635]" /></div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Tổng Quan Báo Cáo</h1>
-        <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Dữ liệu phân tích tư tưởng quân nhân cập nhật theo thời gian thực.</p>
+    <div className="space-y-6" id="dashboard-content">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Tổng Quan Báo Cáo</h1>
+          <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Dữ liệu phân tích tư tưởng quân nhân cập nhật theo thời gian thực.</p>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" className="bg-white dark:bg-[#111] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10" onClick={() => exportElementToPDF("dashboard-content", selectedUnit)}>
+            <Printer className="w-4 h-4 mr-2" /> In Báo Cáo
+          </Button>
+          <select 
+            value={selectedUnit}
+            onChange={(e) => setSelectedUnit(e.target.value)}
+            className="w-full sm:w-auto bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:border-emerald-500 dark:focus:border-[#a3e635]"
+          >
+            <option value="all">Toàn bộ Đơn vị</option>
+            {units.map(u => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Overview Cards */}
@@ -246,7 +303,10 @@ export default function AdminDashboard() {
                         <TableCell className="font-medium text-slate-900 dark:text-white text-xs sm:text-sm whitespace-nowrap">{soldier.full_name}</TableCell>
                         <TableCell className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-[120px] sm:max-w-[200px] truncate" title={soldier.unit}>{soldier.unit}</TableCell>
                         <TableCell>
-                          {sub ? renderBadge(sub.ai_status) : "-"}
+                          <div className="flex items-center gap-2">
+                             {sub ? renderBadge(sub.ai_status) : "-"}
+                             {sub?.is_resolved && <ShieldCheck className="w-4 h-4 text-emerald-500" title="Đã can thiệp xử lý" />}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="outline" size="sm" className="h-7 sm:h-8 text-xs bg-white dark:bg-transparent border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 dark:hover:bg-white/5" onClick={() => openDetails(soldier)}>
@@ -288,11 +348,40 @@ export default function AdminDashboard() {
                        {renderBadge(selectedSoldier.submissions[0].ai_status)}
                     </div>
                  </div>
-                 <div className="bg-slate-50 dark:bg-white/5 p-3 sm:p-4 rounded-xl flex flex-col justify-center items-center border border-slate-100 dark:border-white/5">
+                  <div className="bg-slate-50 dark:bg-white/5 p-3 sm:p-4 rounded-xl flex flex-col justify-center items-center border border-slate-100 dark:border-white/5">
                     <span className="text-[10px] sm:text-xs uppercase tracking-wider mb-2 font-semibold text-slate-500 dark:text-slate-400 w-full text-center">Tâm lý (Điểm)</span>
                     <span className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-white">{selectedSoldier.submissions[0].ai_score}<span className="text-sm sm:text-lg font-medium text-slate-400 dark:text-slate-500">/100</span></span>
                  </div>
               </div>
+
+              {/* ACTION TRACKING MODULE */}
+              {selectedSoldier.submissions[0].ai_status === "Nguy cơ" && (
+                <div className={`p-4 rounded-xl border flex gap-3 items-start transition-colors ${selectedSoldier.submissions[0].is_resolved ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/30' : 'bg-red-50/50 border-red-200 dark:bg-red-500/10 dark:border-red-500/30'}`}>
+                  <div className="pt-1">
+                    <Checkbox 
+                      id="resolve-issue" 
+                      checked={!!selectedSoldier.submissions[0].is_resolved}
+                      onCheckedChange={(checked) => handleToggleResolved(checked as boolean)}
+                      disabled={resolving}
+                      className={selectedSoldier.submissions[0].is_resolved ? 'data-[state=checked]:bg-emerald-500 data-[state=checked]:text-white border-emerald-500' : 'border-red-500'}
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="resolve-issue" className={`font-bold cursor-pointer flex items-center gap-2 ${selectedSoldier.submissions[0].is_resolved ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                      {selectedSoldier.submissions[0].is_resolved ? (
+                        <><ShieldCheck className="w-4 h-4" /> Đã hoàn tất can thiệp tư tưởng</>
+                      ) : (
+                        <><ShieldAlert className="w-4 h-4" /> Yêu cầu can thiệp xử lý ngay</>
+                      )}
+                    </Label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {selectedSoldier.submissions[0].is_resolved 
+                        ? 'Chỉ huy đã xác nhận tiếp xúc, xử lý hoặc động viên chiến sĩ này.' 
+                        : 'Nhấn vào đây để đánh dấu Chỉ huy đã tiếp xúc và giải quyết vấn đề cho chiến sĩ sau khi đọc báo cáo AI.'}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div>
                  <h4 className="font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2 text-sm sm:text-base">
