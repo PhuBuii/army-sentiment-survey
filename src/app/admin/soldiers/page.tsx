@@ -14,8 +14,10 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/utils/supabase/client";
 import { updateSubmissionStatus, createSoldier, updateSoldier, deleteSoldiers } from "@/app/actions/admin-actions";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ExcelUploadDialog } from "@/components/ui/ExcelUploadDialog";
 import {
   ClipboardCopy, Loader2, Upload, UsersRound, Eye, MessageSquare,
   Brain, Edit2, CheckCircle2, ChevronDown, FileText, UserPlus, Trash2, X
@@ -64,6 +66,7 @@ export default function SoldiersPage() {
   const [soldiers, setSoldiers] = useState<Soldier[]>([]);
   const [loading, setLoading]   = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Detail Dialog
@@ -89,14 +92,29 @@ export default function SoldiersPage() {
   const currentPage = parseInt(searchParams.get("page") || "1", 10);
   const ITEMS_PER_PAGE = 10;
 
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("soldiers")
-      .select("*, submissions(*)")
-      .order("created_at", { ascending: false });
-    setSoldiers((data as Soldier[]) || []);
-    setLoading(false);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("soldiers")
+        .select("*, submissions(*)")
+        .order("created_at", { ascending: false });
+      
+      if (error) {
+        console.error("Fetch data error:", error);
+        setSoldiers([]);
+      } else {
+        setSoldiers((data as Soldier[]) || []);
+      }
+    } catch (err) {
+      console.error("Unexpected error in fetchData:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -139,9 +157,7 @@ export default function SoldiersPage() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileUpload = async (file: File) => {
     setUploading(true);
     try {
       const data = await file.arrayBuffer();
@@ -150,15 +166,17 @@ export default function SoldiersPage() {
       const rows: any[] = utils.sheet_to_json(sheet);
       const payload = rows.filter(r => r.full_name && r.unit).map(r => ({ full_name: r.full_name, unit: r.unit }));
       if (payload.length > 0) {
+        const supabase = createClient();
         const { error } = await supabase.from("soldiers").insert(payload);
         if (error) throw error;
         alert(`Đã upload thành công ${payload.length} chiến sĩ.`);
         fetchData();
+        setUploadDialogOpen(false);
       } else {
         alert("File không đúng định dạng (cần cột full_name và unit).");
       }
     } catch { alert("Lỗi upload, vui lòng thử lại."); }
-    finally { setUploading(false); e.target.value = ""; }
+    finally { setUploading(false); }
   };
 
   const copyLink = (token: string) => {
@@ -212,8 +230,14 @@ export default function SoldiersPage() {
 
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`Bạn có chắc chắn muốn xoá ${selectedIds.length} chiến sĩ đã chọn?`)) return;
+    setIsConfirmOpen(true);
+  };
+
+  const handleActualDelete = async () => {
+    setIsDeleting(true);
     const res = await deleteSoldiers(selectedIds);
+    setIsDeleting(false);
+    setIsConfirmOpen(false);
     if (res.error) {
       alert("Lỗi: " + res.error);
     } else {
@@ -243,19 +267,16 @@ export default function SoldiersPage() {
           <Button variant="outline" size="sm" onClick={() => openEditDialog()} className="bg-white dark:bg-transparent border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 dark:hover:bg-white/5 gap-2">
             <UserPlus className="w-4 h-4" /> Thêm Chiến sĩ
           </Button>
-          <div className="relative">
-            <Input type="file" id="s-file" className="hidden" accept=".xlsx,.xls" onChange={handleFileUpload} />
-            <Button
-              variant="default"
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-md transition-colors"
-              onClick={() => document.getElementById("s-file")?.click()}
-              disabled={uploading}
-            >
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              Tải lên Excel
-            </Button>
-          </div>
+          <Button
+            variant="default"
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-md transition-colors"
+            onClick={() => setUploadDialogOpen(true)}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            Tạo danh sách từ Excel
+          </Button>
         </div>
       </div>
 
@@ -532,6 +553,28 @@ export default function SoldiersPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onOpenChange={setIsConfirmOpen}
+        onConfirm={handleActualDelete}
+        isLoading={isDeleting}
+        title="Xác nhận xoá chiến sĩ"
+        description={`Đồng chí có chắc chắn muốn xoá ${selectedIds.length} chiến sĩ này khỏi danh sách? Hành động này không thể hoàn tác.`}
+        confirmText="Xoá vĩnh viễn"
+        variant="danger"
+      />
+
+      <ExcelUploadDialog
+        isOpen={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onUpload={handleFileUpload}
+        isUploading={uploading}
+        title="Tải lên danh sách quân nhân"
+        description="Kéo thả tập tin Excel chứa hồ sơ quân nhân để thêm hàng loạt vào hệ thống."
+        sampleFileName="mau_chien_si.xlsx"
+        sampleFileUrl="/mau_chien_si.xlsx"
+      />
     </div>
   );
 }

@@ -61,11 +61,14 @@ function ProgressBar({ value, total }: { value: number; total: number }) {
 
 export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
   const [phase, setPhase]         = useState<Phase>("answering");
+  const [localQuestions, setLocalQuestions] = useState<Question[]>(questions);
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers]     = useState<Record<string, string>>({});
   const [errorStr, setErrorStr]   = useState("");
   const [aiStep, setAiStep]       = useState(0);
   const [aiDone, setAiDone]       = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [apiError, setApiError]   = useState("");
   const textareaRef               = useRef<HTMLTextAreaElement>(null);
 
   // auto-resize textarea
@@ -95,12 +98,40 @@ export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
     run();
   }, [phase]);
 
-  const currentQ   = questions[currentStep];
+  const currentQ   = localQuestions[currentStep];
   const currentAns = answers[currentQ.id] ?? "";
   const canNext    = currentAns.trim().length > 0;
   const answeredCount = Object.values(answers).filter(v => v.trim()).length;
 
-  const handleNext  = () => setCurrentStep(p => Math.min(p + 1, questions.length - 1));
+  const handleNext = async () => {
+    if (!canNext || isChecking) return;
+    setIsChecking(true);
+    setApiError("");
+    try {
+      const res = await fetch("/api/interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: currentQ.content, answer: currentAns }),
+      });
+      if (!res.ok) {
+        if (res.status === 429) throw new Error("Bạn thao tác quá nhanh! Vui lòng chậm lại.");
+        throw new Error("Lỗi khi kết nối tới Trợ lý AI.");
+      }
+      const data = await res.json();
+      if (data.needsFollowUp && data.followUpQuestion) {
+        const newQ = { id: `followup-${Date.now()}`, content: `🔍 AI Trợ lý: ${data.followUpQuestion}` };
+        const updatedQs = [...localQuestions];
+        updatedQs.splice(currentStep + 1, 0, newQ);
+        setLocalQuestions(updatedQs);
+      }
+      setCurrentStep(p => Math.min(p + 1, localQuestions.length - 1));
+    } catch (err: any) {
+      setApiError(err.message || "Lỗi hệ thống.");
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   const handlePrev  = () => setCurrentStep(p => Math.max(p - 1, 0));
 
   const goPreview = () => setPhase("preview");
@@ -111,7 +142,7 @@ export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
     setAiDone(false);
     setErrorStr("");
 
-    const payload = questions.map(q => ({ question: q.content, answer: answers[q.id] ?? "" }));
+    const payload = localQuestions.map(q => ({ question: q.content, answer: answers[q.id] ?? "" }));
     const result  = await submitSurveyAndAnalyze(soldier.id, payload);
 
     // wait until AI animation finishes before showing result
@@ -157,7 +188,7 @@ export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
           {/* Stats */}
           <div className="flex gap-6 pt-2">
             <div className="text-center">
-              <div className="text-2xl font-bold text-emerald-600 dark:text-[#a3e635]">{questions.length}</div>
+              <div className="text-2xl font-bold text-emerald-600 dark:text-[#a3e635]">{localQuestions.length}</div>
               <div className="text-xs text-slate-400 mt-0.5">Câu hỏi</div>
             </div>
             <div className="w-px bg-slate-200 dark:bg-white/10" />
@@ -250,7 +281,7 @@ export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
 
         {/* Answer list */}
         <div className="px-6 py-5 space-y-4 max-h-[55vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10">
-          {questions.map((q, i) => (
+          {localQuestions.map((q, i) => (
             <div key={q.id} className="group rounded-xl border border-slate-100 dark:border-white/8 bg-slate-50/60 dark:bg-white/4 p-4 hover:border-emerald-200 dark:hover:border-[#a3e635]/30 transition-colors duration-200">
               <div className="flex gap-3">
                 <span className="shrink-0 w-6 h-6 rounded-full bg-emerald-100 dark:bg-[#a3e635]/15 text-emerald-700 dark:text-[#a3e635] text-xs font-bold flex items-center justify-center mt-0.5">
@@ -303,13 +334,13 @@ export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
   // ─────────────────────────────────────────────────────────────────────────
   // PHASE: ANSWERING
   // ─────────────────────────────────────────────────────────────────────────
-  const isLastStep = currentStep === questions.length - 1;
+  const isLastStep = currentStep === localQuestions.length - 1;
 
   return (
     <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-[#4d6639]/60 bg-white dark:bg-[#0a0f08] shadow-2xl">
       {/* ── Top progress bar ── */}
       <div className="px-0">
-        <ProgressBar value={answeredCount} total={questions.length} />
+        <ProgressBar value={answeredCount} total={localQuestions.length} />
       </div>
 
       {/* ── Header ── */}
@@ -325,15 +356,15 @@ export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
             </div>
           </div>
           {/* Step dots */}
-          <div className="flex items-center gap-1.5">
-            {questions.map((_, i) => (
+          <div className="flex items-center gap-1.5 flex-wrap justify-end max-w-[50%]">
+            {localQuestions.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrentStep(i)}
                 className={`rounded-full transition-all duration-300 ${
                   i === currentStep
                     ? "w-5 h-2.5 bg-emerald-500 dark:bg-[#a3e635]"
-                    : answers[questions[i].id]?.trim()
+                    : answers[localQuestions[i].id]?.trim()
                     ? "w-2.5 h-2.5 bg-emerald-300 dark:bg-[#a3e635]/50"
                     : "w-2.5 h-2.5 bg-slate-200 dark:bg-white/15"
                 }`}
@@ -352,11 +383,11 @@ export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
         {/* Step label */}
         <p className="text-xs font-semibold text-emerald-600 dark:text-[#a3e635] uppercase tracking-widest mb-3 flex items-center gap-2 font-mono">
           <span className="inline-flex w-5 h-5 rounded-full bg-emerald-50 dark:bg-[#a3e635]/15 items-center justify-center text-[10px] font-bold">{currentStep + 1}</span>
-          Câu hỏi {currentStep + 1} / {questions.length}
+          Câu hỏi {currentStep + 1} / {localQuestions.length}
         </p>
 
         {/* Question text */}
-        <h3 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-white leading-relaxed mb-6">
+        <h3 className={`text-lg sm:text-xl font-semibold leading-relaxed mb-6 ${currentQ.id.startsWith('followup') ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-white'}`}>
           {currentQ.content}
         </h3>
 
@@ -382,8 +413,14 @@ export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
           )}
         </div>
 
-        <p className="text-xs text-slate-300 dark:text-slate-600 mt-2 font-mono">
-          Ctrl + Enter để sang bước tiếp theo
+        {apiError && (
+          <p className="text-xs text-red-500 dark:text-red-400 mt-2 flex items-center gap-1 font-medium bg-red-50 dark:bg-red-950/20 px-3 py-2 rounded-lg border border-red-100 dark:border-red-900/30">
+            {apiError}
+          </p>
+        )}
+        <p className="text-xs text-slate-300 dark:text-slate-600 mt-2 font-mono flex items-center justify-between">
+          <span>Ctrl + Enter để sang bước tiếp theo</span>
+          {isChecking && <span className="flex items-center gap-1 text-emerald-600 dark:text-[#a3e635]"><DotPulse /> AI đang phân tích...</span>}
         </p>
       </div>
 
@@ -401,13 +438,13 @@ export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
           {/* Answered count badge */}
           <span className="hidden sm:flex text-xs text-slate-400 dark:text-slate-500 items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 dark:text-[#a3e635]" />
-            {answeredCount}/{questions.length} đã trả lời
+            {answeredCount}/{localQuestions.length} đã trả lời
           </span>
 
           {isLastStep ? (
             <button
-              onClick={goPreview}
-              disabled={!canNext}
+              onClick={isChecking ? undefined : goPreview}
+              disabled={!canNext || isChecking}
               className="px-5 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 dark:bg-[#a3e635] dark:hover:bg-[#84cc16] text-white dark:text-[#0a0f08] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm shadow-emerald-200 dark:shadow-[#a3e635]/20"
             >
               <Eye className="w-4 h-4" /> Xem lại & Nộp bài
@@ -415,10 +452,10 @@ export default function SurveyForm({ soldier, questions }: SurveyFormProps) {
           ) : (
             <button
               onClick={handleNext}
-              disabled={!canNext}
-              className="px-5 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 dark:bg-[#a3e635] dark:hover:bg-[#84cc16] text-white dark:text-[#0a0f08] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              disabled={!canNext || isChecking}
+              className="px-5 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 dark:bg-[#a3e635] dark:hover:bg-[#84cc16] text-white dark:text-[#0a0f08] disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-w-[130px] justify-center"
             >
-              Tiếp theo <ArrowRight className="w-4 h-4" />
+              {isChecking ? <DotPulse /> : <><Sparkles className="w-4 h-4" /> Tiếp theo <ArrowRight className="w-4 h-4" /></>}
             </button>
           )}
         </div>

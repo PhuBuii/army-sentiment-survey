@@ -1,11 +1,26 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { supabase as anonSupabase } from "@/lib/supabase";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Helper for system operations
+function getAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("⚠️ Thiếu cấu hình SUPABASE_SERVICE_ROLE_KEY.");
+  }
+
+  return createSupabaseClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
 
 export async function validateTokenAndGetQuestions(token: string) {
   try {
-    const { data: soldier, error: soldierError } = await supabase
+    const { data: soldier, error: soldierError } = await anonSupabase
       .from("soldiers")
       .select("*")
       .eq("token", token)
@@ -19,7 +34,7 @@ export async function validateTokenAndGetQuestions(token: string) {
       return { error: "Khảo sát này đã được hoàn thành trước đó." };
     }
 
-    const { data: questions, error: qError } = await supabase
+    const { data: questions, error: qError } = await anonSupabase
       .from("questions")
       .select("id, content");
 
@@ -45,16 +60,35 @@ export async function submitSurveyAndAnalyze(
   responses: { question: string; answer: string }[]
 ) {
   try {
-    // 1. AI Analysis
+    // 1. AI Analysis with Fallback and Retry
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return { error: "Thiếu cấu hình GEMINI_API_KEY." };
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const modelsToTry = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-3.1-flash-lite-preview"];
+    let aiData = null;
+    let lastError = null;
 
-    const prompt = `Bạn là chuyên gia tâm lý quân đội. Hãy phân tích 5 câu trả lời này để đánh giá tư tưởng chiến sĩ.
+    for (const modelName of modelsToTry) {
+      let retries = 0;
+      const maxRetries = 2;
+
+      while (retries <= maxRetries) {
+        try {
+          console.log(`Trying model: ${modelName} (Attempt ${retries + 1})`);
+          let model;
+          if (process.env.GEMINI_CACHE_NAME) {
+            model = genAI.getGenerativeModel({ 
+              model: modelName,
+              cachedContent: { name: process.env.GEMINI_CACHE_NAME } as any
+            });
+          } else {
+            model = genAI.getGenerativeModel({ model: modelName });
+          }
+          
+          const prompt = `Bạn là chuyên gia tâm lý quân đội. Hãy phân tích 5 câu trả lời này để đánh giá tư tưởng chiến sĩ.
 Dữ liệu đầu vào:
 ${JSON.stringify(responses, null, 2)}
 
@@ -66,22 +100,46 @@ Luôn trả về duy nhất định dạng JSON thuần (không bọc trong mark
   "advice": "<lời khuyên hướng xử lý cho chỉ huy>"
 }`;
 
-    const result = await model.generateContent(prompt);
-    let textResult = result.response.text();
-    
-    // Clean potential markdown quotes
-    textResult = textResult.replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
+          const result = await model.generateContent(prompt);
+          let textResult = result.response.text();
+          
+          // Clean potential markdown quotes
+          textResult = textResult.replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
 
-    let aiData;
-    try {
-      aiData = JSON.parse(textResult);
-    } catch (e) {
-      console.error("AI parse fail", textResult);
-      return { error: "Lỗi phân tích cú pháp kết quả từ AI." };
+          try {
+            aiData = JSON.parse(textResult);
+            break; // Success! Exit retry loop
+          } catch (e) {
+            console.error(`AI parse fail for ${modelName}`, textResult);
+            throw new Error("Lỗi phân tích cú pháp kết quả từ AI.");
+          }
+        } catch (err: any) {
+          lastError = err;
+          const isRetryable = err.message?.includes("503") || err.message?.includes("429") || err.message?.includes("high demand");
+          
+          if (isRetryable && retries < maxRetries) {
+            retries++;
+            // Exponential backoff
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 1000));
+            continue;
+          }
+          break; // Not retryable or max retries reached, try next model
+        }
+      }
+      
+      if (aiData) break; // If we got data from any model, stop trying
     }
 
-    // 2. Save to Supabase
-    const { error: insertError } = await supabase.from("submissions").insert({
+    if (!aiData) {
+      console.error("All AI models failed:", lastError);
+      return { error: `AI đang quá tải (503). Vui lòng thử lại sau ít phút. Chi tiết: ${lastError?.message || "Unknown error"}` };
+    }
+
+    // 2. Database Operations (System Level)
+    const adminSupabase = getAdminClient();
+
+    // 2.1 Save submission
+    const { error: insertError } = await adminSupabase.from("submissions").insert({
       soldier_id: soldierId,
       responses: responses,
       ai_score: aiData.score,
@@ -92,8 +150,8 @@ Luôn trả về duy nhất định dạng JSON thuần (không bọc trong mark
 
     if (insertError) throw insertError;
 
-    // 3. Mark soldier as completed
-    const { error: updateError } = await supabase
+    // 2.2 Mark soldier as completed
+    const { error: updateError } = await adminSupabase
       .from("soldiers")
       .update({ is_completed: true })
       .eq("id", soldierId);

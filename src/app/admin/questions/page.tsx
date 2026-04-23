@@ -18,8 +18,10 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/utils/supabase/client";
 import { createQuestion, updateQuestion, deleteQuestions } from "@/app/actions/admin-actions";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ExcelUploadDialog } from "@/components/ui/ExcelUploadDialog";
 import { Loader2, Upload, HelpCircle, Plus, Trash2, Edit2, CheckCircle2 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { useSearchParams } from "next/navigation";
@@ -34,6 +36,7 @@ export default function QuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Edit/Create Dialog
@@ -41,6 +44,8 @@ export default function QuestionsPage() {
   const [editTarget, setEditTarget] = useState<Question | null>(null);
   const [editContent, setEditContent] = useState("");
   const [savingQuestion, setSavingQuestion] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const searchParams = useSearchParams();
   const currentPage = parseInt(searchParams.get("page") || "1", 10);
@@ -49,6 +54,7 @@ export default function QuestionsPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      const supabase = createClient();
       const { data, error } = await supabase
         .from('questions')
         .select('*')
@@ -70,9 +76,7 @@ export default function QuestionsPage() {
   const totalPages = Math.ceil(questions.length / ITEMS_PER_PAGE);
   const paginatedQuestions = questions.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileUpload = async (file: File) => {
     setUploading(true);
     try {
       const data = await file.arrayBuffer();
@@ -81,10 +85,12 @@ export default function QuestionsPage() {
       const jsonData: any[] = utils.sheet_to_json(firstSheet);
       const payload = jsonData.filter(r => r.content).map(r => ({ content: r.content }));
       if (payload.length > 0) {
+        const supabase = createClient();
         const { error } = await supabase.from('questions').insert(payload);
         if (error) throw error;
         alert(`Đã upload thành công ${payload.length} câu hỏi vào ngân hàng.`);
         fetchData();
+        setUploadDialogOpen(false);
       } else {
          alert("File Excel không đúng định dạng (thiếu cột content).");
       }
@@ -93,7 +99,6 @@ export default function QuestionsPage() {
       alert(`Đã xảy ra lỗi khi upload file câu hỏi.`);
     } finally {
       setUploading(false);
-      e.target.value = ''; 
     }
   };
 
@@ -140,8 +145,14 @@ export default function QuestionsPage() {
 
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`Bạn có chắc chắn muốn xoá ${selectedIds.length} câu hỏi đã chọn?`)) return;
+    setIsConfirmOpen(true);
+  };
+
+  const handleActualDelete = async () => {
+    setIsDeleting(true);
     const res = await deleteQuestions(selectedIds);
+    setIsDeleting(false);
+    setIsConfirmOpen(false);
     if (res.error) {
       alert("Lỗi: " + res.error);
     } else {
@@ -169,13 +180,10 @@ export default function QuestionsPage() {
           <Button variant="outline" size="sm" onClick={() => openEditDialog()} className="bg-white dark:bg-transparent border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 dark:hover:bg-white/5 gap-2">
             <Plus className="w-4 h-4" /> Thêm Câu hỏi
           </Button>
-          <div className="relative w-full sm:w-auto">
-            <Input type="file" id="q-file" className="hidden" accept=".xlsx, .xls" onChange={handleFileUpload} />
-            <Button className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 shadow-md text-white flex items-center gap-2 transition-colors" size="sm" onClick={() => document.getElementById('q-file')?.click()} disabled={uploading}>
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              Tải lên Excel
-            </Button>
-          </div>
+          <Button className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 shadow-md text-white flex items-center gap-2 transition-colors" size="sm" onClick={() => setUploadDialogOpen(true)} disabled={uploading}>
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            Tải lên Excel
+          </Button>
         </div>
       </div>
 
@@ -275,6 +283,28 @@ export default function QuestionsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog 
+        isOpen={isConfirmOpen}
+        onOpenChange={setIsConfirmOpen}
+        onConfirm={handleActualDelete}
+        isLoading={isDeleting}
+        title="Xác nhận xoá câu hỏi"
+        description={`Đồng chí có chắc chắn muốn xoá ${selectedIds.length} câu hỏi này khỏi ngân hàng dữ liệu? Hành động này không thể hoàn tác.`}
+        confirmText="Xoá vĩnh viễn"
+        variant="danger"
+      />
+
+      <ExcelUploadDialog
+        isOpen={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onUpload={handleFileUpload}
+        isUploading={uploading}
+        title="Tải lên ngân hàng câu hỏi"
+        description="Kéo thả tập tin Excel chứa danh sách câu hỏi để thêm hàng loạt vào hệ thống."
+        sampleFileName="mau_cau_hoi.xlsx"
+        sampleFileUrl="/mau_cau_hoi.xlsx"
+      />
     </div>
   );
 }

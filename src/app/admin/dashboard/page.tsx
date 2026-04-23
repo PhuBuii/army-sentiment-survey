@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/utils/supabase/client";
 import { Loader2, TrendingUp, Users, Target, Activity, ArrowRight } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import Link from "next/link";
@@ -65,6 +65,7 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      const supabase = createClient();
       // Fetch soldiers and their latest submission
       const { data, error } = await supabase
         .from('soldiers')
