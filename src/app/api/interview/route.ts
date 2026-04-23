@@ -1,4 +1,4 @@
-import { google } from "@ai-sdk/google";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { NextResponse } from "next/server";
@@ -23,6 +23,10 @@ export async function POST(req: Request) {
     }
 
     // 3. Sử dụng Vercel AI SDK và Gemini 2.5 Flash để quyết định hướng phỏng vấn
+    const google = createGoogleGenerativeAI({
+      apiKey: process.env.GEMINI_API_KEY || "",
+    });
+
     const { object } = await generateObject({
       model: google("models/gemini-2.5-flash"), 
       system: `Bạn là trợ lý tâm lý chuyên nghiệp phục vụ trong Quân đội. Chiến sĩ vừa trả lời cho câu hỏi: "${question}".

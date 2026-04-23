@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { read, utils } from "xlsx";
+import ExcelJS from "exceljs";
+import QRCode from "qrcode";
+import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +22,7 @@ import { updateSubmissionStatus, createSoldier, updateSoldier, deleteSoldiers } 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExcelUploadDialog } from "@/components/ui/ExcelUploadDialog";
 import {
-  ClipboardCopy, Loader2, Upload, UsersRound, Eye, MessageSquare,
+  ClipboardCopy, Loader2, Upload, UsersRound, Eye, MessageSquare, QrCode,
   Brain, Edit2, CheckCircle2, ChevronDown, FileText, UserPlus, Trash2, X
 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
@@ -182,7 +185,7 @@ export default function SoldiersPage() {
   const copyLink = (token: string) => {
     const url = `${window.location.origin}/survey/${token}`;
     navigator.clipboard.writeText(url);
-    alert("Đã copy link khảo sát!");
+    toast.success("Đã copy link! Gửi cho chiến sĩ ngay.", { description: url });
   };
 
   const handleCreateOrUpdateSoldier = async () => {
@@ -239,10 +242,83 @@ export default function SoldiersPage() {
     setIsDeleting(false);
     setIsConfirmOpen(false);
     if (res.error) {
-      alert("Lỗi: " + res.error);
+      toast.error("Lỗi: " + res.error);
     } else {
+      toast.success("Đã xoá quân nhân thành công");
       setSelectedIds([]);
       fetchData();
+    }
+  };
+
+  const handleExportQRExcel = async () => {
+    const pendingList = soldiers.filter(s => !s.is_completed);
+    if (pendingList.length === 0) {
+      toast.warning("Chưa có chiến sĩ nào cần khảo sát (tất cả đã nộp bài).");
+      return;
+    }
+
+    const toastId = toast.loading(`Đang khởi tạo mã QR cho ${pendingList.length} chiến sĩ...`);
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet("DS Khao Sat", {
+        views: [{ state: 'frozen', ySplit: 1 }]
+      });
+
+      sheet.columns = [
+        { header: "STT", key: "stt", width: 8 },
+        { header: "Họ và Tên", key: "name", width: 30 },
+        { header: "Đơn vị", key: "unit", width: 35 },
+        { header: "Mã QR Quy Quét", key: "qr", width: 20 },
+        { header: "Link dự phòng", key: "link", width: 50 },
+      ];
+
+      // Format header
+      sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FF0EA5E9" } };
+      sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+      sheet.getRow(1).height = 30;
+
+      for (let i = 0; i < pendingList.length; i++) {
+        const s = pendingList[i];
+        const link = `${window.location.origin}/survey/${s.token}`;
+
+        const row = sheet.addRow({
+          stt: i + 1,
+          name: s.full_name,
+          unit: s.unit,
+          link: link,
+        });
+        
+        row.height = 110;
+        row.alignment = { vertical: 'middle', wrapText: true };
+
+        // Tạo Base64 QR Code
+        const qrBase64 = await QRCode.toDataURL(link, { width: 140, margin: 1, color: { dark: '#0a0f08', light: '#ffffff' } });
+        
+        const imageId = workbook.addImage({
+          base64: qrBase64,
+          extension: 'png',
+        });
+
+        sheet.addImage(imageId, {
+          tl: { col: 3, row: i + 1 },
+          ext: { width: 130, height: 130 },
+        });
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `QR_KhaoSat_${new Date().toISOString().slice(0,10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("Đã xuất file Excel kèm mã QR thành công!", { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error("Đã xảy ra lỗi trong quá trình tạo Excel.", { id: toastId });
     }
   };
 
@@ -266,6 +342,9 @@ export default function SoldiersPage() {
           )}
           <Button variant="outline" size="sm" onClick={() => openEditDialog()} className="bg-white dark:bg-transparent border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 dark:hover:bg-white/5 gap-2">
             <UserPlus className="w-4 h-4" /> Thêm Chiến sĩ
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportQRExcel} className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 gap-2">
+            <QrCode className="w-4 h-4" /> DS Chờ khảo sát (QR Array)
           </Button>
           <Button
             variant="default"
