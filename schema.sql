@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS public.submissions (
     ai_status TEXT CHECK (ai_status IN ('An tâm', 'Dao động', 'Nguy cơ')),
     ai_summary TEXT,
     ai_advice TEXT,
+    ai_dialogue_script TEXT, -- Task 3: Dialogue script for 1-on-1 counseling
     admin_note TEXT, -- Manual notes from Command
     is_resolved BOOLEAN DEFAULT FALSE, -- Track if an at-risk soldier has been handled
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -43,6 +44,7 @@ CREATE TABLE IF NOT EXISTS public.submissions (
 
 -- Force add columns if table already exists
 ALTER TABLE public.submissions ADD COLUMN IF NOT EXISTS is_resolved BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.submissions ADD COLUMN IF NOT EXISTS ai_dialogue_script TEXT;
 
 -- 5.5 Table: Admin Profiles (RBAC)
 CREATE TABLE IF NOT EXISTS public.admin_profiles (
@@ -119,3 +121,28 @@ COMMENT ON TABLE public.submissions IS 'Stores original responses and AI-generat
 COMMENT ON COLUMN public.submissions.admin_note IS 'Manual assessment or instruction added by the Commanding Officer.';
 COMMENT ON COLUMN public.submissions.is_resolved IS 'Marks whether human intervention was performed for this assessment.';
 COMMENT ON TABLE public.admin_profiles IS 'Maps auth.users UUID to specific App Roles like unit_admin to filter data view';
+
+-- 10. Table: App Settings (Dynamic Configurations like Cache Name)
+CREATE TABLE IF NOT EXISTS public.app_settings (
+    id TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Initialize GEMINI_CACHE_NAME if not exists
+INSERT INTO public.app_settings (id, value) 
+VALUES ('GEMINI_CACHE_NAME', '') 
+ON CONFLICT (id) DO NOTHING;
+
+-- Enable RLS
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read settings
+DROP POLICY IF EXISTS "Allow public read settings" ON public.app_settings;
+CREATE POLICY "Allow public read settings" ON public.app_settings
+    FOR SELECT USING (true);
+
+-- Admins can manage settings
+DROP POLICY IF EXISTS "Admins can manage settings" ON public.app_settings;
+CREATE POLICY "Admins can manage settings" ON public.app_settings
+    FOR ALL TO authenticated USING (true) WITH CHECK (true);

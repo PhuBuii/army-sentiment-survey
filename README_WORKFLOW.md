@@ -1,80 +1,89 @@
-# KIẾN TRÚC & LUỒNG HOẠT ĐỘNG (SYSTEM ARCHITECTURE WORKFLOW)
-**Dự án**: AI Army Sentiment Survey - Phiên bản SaaS Architecture
+# 🪖 Army AI Sentiment Survey - Documentation & Workflow
 
-Tài liệu này tổng hợp toàn bộ luồng hoạt động của hệ thống từ góc nhìn kiến trúc phần mềm, chỉ dẫn tường minh cách tính năng AI, Database và Rate-Limiting liên kết với nhau.
-
----
-
-## 1. Kiến trúc Tổng thể (Overall Architecture)
-
-Hệ thống hoạt động theo mô hình **Client-Server Serverless**, sử dụng Next.js làm Fullstack Framework:
-*   **Frontend (Client Component):** React / Tailwind CSS / Shadcn UI.
-*   **Backend (Server Actions / API Routes):** Xử lý logic trên hạ tầng Node.js an toàn (không lộ API key).
-*   **Database (BaaS):** Supabase PostgreSQL, bảo mật bằng Row Level Security (RLS).
-*   **Bảo vệ hệ thống (Ratelimit):** Upstash Redis.
-*   **Engine Trí tuệ (LLM):** Google Gemini 2.5 Flash / 3.0 Pro thông qua Vercel AI SDK.
+Hệ thống khảo sát và phân tích diễn biến tư tưởng chiến sĩ ứng dụng Trí tuệ nhân tạo (AI) thế hệ mới, được thiết kế chuyên biệt cho môi trường Quân đội.
 
 ---
 
-## 2. Luồng Người Dùng (User Flows)
+## 🛠 1. Công nghệ sử dụng (Tech Stack)
 
-### A. Luồng Quản trị viên (Admin Flow)
-1. **Đăng nhập:** Xác thực qua hệ thống Auth của Supabase. Trả về Session Token cho trình duyệt.
-2. **Quản lý Dữ liệu:** Admin có thể thêm Chiến sĩ, xuất/nhập danh sách qua Excel.
-3. **Giám sát:** Biểu đồ Real-time cập nhật số lượng chiến sĩ *An tâm, Dao động, Nguy cơ* lấy từ database Submissions.
-4. **Cấp quyền:** Admin tạo tài khoản hoặc đổi mật khẩu qua Admin Service Role Client (bỏ qua mọi rào cản RLS).
+Hệ thống được xây dựng trên nền tảng công nghệ hiện đại, đảm bảo tính bảo mật, hiệu năng và khả năng mở rộng:
 
-### B. Luồng Chiến sĩ - Khảo sát Tương tác AI (Interview Mode)
-1. **Truy cập Link:** Khớp `token` từ URL với bảng `soldiers`. Đảm bảo chiến sĩ chưa thi. Lấy ra ngẫu nhiên 5 câu hỏi từ bảng `questions`.
-2. **Phỏng vấn thời gian thực (Interactive Real-time):**
-   *   Chiến sĩ nhập câu trả lời cho Câu 1.
-   *   Trước khi qua Câu 2, UI sẽ tự động đẩy đoạn text lên `/api/interview` (có bảo vệ bởi **Rate Limit**).
-   *   **AI (Gemini) Đánh giá:** Dùng kĩ thuật *Structured Output* (trả về JSON bắt buộc) xem câu trả lời có chứa cờ đỏ (Red flag: chán nản, bị phạt, áp lực) không.
-   *   **Rẽ nhánh:**
-       *   Trường hợp bình thường: Chuyển thẳng sang Câu 2.
-       *   Trường hợp có cờ đỏ: API sẽ trả về `needsFollowUp: true` kèm theo 1 câu hỏi phụ vừa được Gemini sinh ra (VD: *"Vì sao đồng chí lại nghĩ như vậy?"*). Hệ thống sẽ bắt chiến sĩ trả lời trước khi đi tiếp.
-3. **Kết thúc bài:** Gom lại toàn bộ Q&A form (bao gồm cả các câu AI hỏi thêm), gửi cho Gemini đánh giá Tổng quan lần cuối.
-4. **Lưu trữ:** Ghi kết quả điểm, xếp loại, nhận xét và lời khuyên vào Supabase bằng quyền Service Role. Cập nhật `is_completed = true`.
+*   **Framework:** [Next.js 15+](https://nextjs.org/) (App Router) - Tối ưu hóa hiệu năng SSR/ISR và SEO.
+*   **Ngôn ngữ:** [TypeScript](https://www.typescriptlang.org/) - Đảm bảo tính chặt chẽ của mã nguồn và giảm thiểu lỗi runtime.
+*   **Trí tuệ nhân tạo:** [Google Gemini AI](https://ai.google.dev/) - Phân tích cảm xúc, chấm điểm tư tưởng và đưa ra lời khuyên nghiệp vụ.
+*   **Cơ sở dữ liệu & Auth:** [Supabase](https://supabase.com/) (PostgreSQL) - Hệ thống lưu trữ dữ liệu thời gian thực và quản lý xác thực bảo mật.
+*   **Giao diện (UI/UX):**
+    *   [Tailwind CSS](https://tailwindcss.com/) - Thiết kế giao diện thích ứng (Responsive).
+    *   [Lucide React](https://lucide.dev/) - Hệ thống Icon chuyên nghiệp.
+    *   [Recharts](https://recharts.org/) - Biểu đồ trực quan hóa dữ liệu.
+    *   [Shadcn/UI](https://ui.shadcn.com/) - Bộ thành phần giao diện cao cấp.
+*   **Xử lý PDF:** Native Browser Print Engine với CSS @media print tùy chỉnh theo chuẩn văn bản hành chính Việt Nam.
 
 ---
 
-## 3. Hướng dẫn thiết lập Upstash Redis (Chống Spam AI)
+## 🚀 2. Luồng hoạt động (Workflow)
 
-Hiện tại có vô vàn Bot chuyên spam điền form tự động. Nếu không bị chặn, chúng có thể gọi API Gemini hàng chục nghìn lần, đốt sạch tài khoản Billing Google của bạn.
-**Upstash Redis** cung cấp cơ chế giới hạn lượng Request dựa trên địa chỉ IP (Rate Limiting) hoàn toàn miễn phí.
+Hệ thống vận hành theo một chu trình khép kín và bảo mật tuyệt đối:
 
-### Cách lấy cấu hình Upstash:
-1. Truy cập [Upstash Console](https://console.upstash.com/). Đăng nhập bằng tài khoản Google/GitHub.
-2. Tại tab "Redis", bấm nút **Create Database**.
-   *   Name: `army-ai-ratelimit`
-   *   Type: `Regional` (Chọn khu vực Singapore để gần VN nhất, ping thấp).
-   *   Bật tính năng `Eviction` mặc định.
-3. Khi tạo xong, cuộn xuống phần **REST API**.
-4. Bạn sẽ thấy 2 thông số:
-   *   `UPSTASH_REDIS_REST_URL`
-   *   `UPSTASH_REDIS_REST_TOKEN`
-5. Copy 2 tham số này, mở file `.env.local` ở thư mục code và dán vào:
-```env
-UPSTASH_REDIS_REST_URL="https://magnetic-moccasin-xxxxx.upstash.io"
-UPSTASH_REDIS_REST_TOKEN="AYxxASQg..."
-```
+### Bước 1: Quản lý & Cấp phát (Admin)
+*   Cán bộ quản trị (Admin) tạo danh sách chiến sĩ trong hệ thống.
+*   Hệ thống tạo ra một **Token bảo mật một chiều** (Single-use Token) cho mỗi chiến sĩ.
+*   Token này đảm bảo: Một người chỉ làm 1 lần, không thể khai báo hộ, không thể làm lại sau khi đã nộp.
+
+### Bước 2: Khảo sát tương tác AI (Soldier)
+*   Chiến sĩ truy cập link khảo sát thông qua Token được cấp.
+*   Hệ thống hiển thị giao diện khảo sát tối giản, tập trung (Cyber Defense style).
+*   Trong quá trình trả lời, AI có thể đưa ra các **câu hỏi bổ sung (Follow-up Questions)** dựa trên nội dung trả lời trước đó để đào sâu tâm lý.
+
+### Bước 3: Phân tích & Đánh giá tức thì (AI Core)
+*   Ngay sau khi nộp bài, Gemini AI sẽ phân tích toàn bộ văn bản.
+*   **Chấm điểm tư tưởng:** Thang điểm 1-100.
+*   **Phân loại trạng thái:** 🟢 An tâm, 🟡 Dao động, 🔴 Nguy cơ.
+*   **Báo cáo AI:** Tổng hợp nhận xét, đưa ra lời khuyên cho Chỉ huy và gợi ý kịch bản đối thoại 1-1.
+
+### Bước 4: Giám sát & Xử lý (Commander)
+*   Chỉ huy truy cập Dashboard để xem thống kê toàn đơn vị.
+*   Nhận cảnh báo tức thì về các trường hợp "Nguy cơ".
+*   Đánh dấu "Đã xử lý" sau khi đã gặp gỡ và động viên chiến sĩ.
+*   Xuất báo cáo PDF chính quy để báo cáo cấp trên.
+
+---
+
+## ✨ 3. Các tính năng chính (Core Features)
+
+### 📊 Dashboard Thông minh
+*   Biểu đồ tỷ trọng tâm lý (Pie Chart) trực quan.
+*   Thẻ thống kê quân số: Tổng số, Đã khảo sát, Cần can thiệp.
+*   Bảng cập nhật kết quả khảo sát thời gian thực.
+
+### 📝 Hệ thống Khảo sát AI-First
+*   Hỗ trợ lưu nháp tự động (Auto-save) vào LocalStorage.
+*   Cơ chế kiểm tra kết nối mạng (Offline/Online Detection).
+*   Giao diện Chatbot-like tương tác mượt mà.
+
+### 📜 Báo cáo PDF chuyên nghiệp
+*   Thiết kế theo chuẩn văn bản hành chính Quân đội (Nghị định 30/2020/NĐ-CP).
+*   Tự động lọc và trình bày các trường hợp trọng điểm.
+*   Bố cục tối ưu để in ấn (A4), căn lề chuẩn xác.
+
+### 🔐 Bảo mật & Phân quyền
+*   Xác thực đa lớp qua Supabase Auth.
+*   Cơ chế RBAC (Phân quyền theo cấp bậc đơn vị).
+*   Token khảo sát mã hóa, ngăn chặn truy cập trái phép.
+
+### 📱 Thiết kế Responsive (WebApp)
+*   Hoạt động hoàn hảo trên mọi thiết bị: Desktop, Tablet, Smartphone.
+*   Thanh điều hướng "Floating" hiện đại trên di động.
+*   Giao diện Dark Mode/Light Mode tùy chỉnh theo môi trường.
 
 ---
 
-## 4. Hướng dẫn thiết lập Gemini Context Caching (Token Optimization)
-
-Khi hệ thống phát triển, bạn muốn AI đóng giả làm Sĩ quantheo chuẩn điều lệnh mới nhất (Rulebook nặng 100 trang PDF / 50.000 tokens). Nếu mỗi bài khảo sát của chiến sĩ đều nạp lại 50.000 tokens này, chi phí sẽ rất cao.
-
-**Cơ chế Context Caching:**
-Chúng ta sẽ "trả tiền 1 lần" để tải file đó lên kho Cache của Google. Nhận về 1 cái mã `cacheName` (Giống như thẻ thư viện).
-Những lần sau chỉ cần đưa cái "thẻ thư viện" (string 50 kí tự) đó cho Gemini là nó lập tức nhớ lại cả 100 trang tài liệu trong tích tắc, **giảm tới 75% chi phí**.
-
-### Cách hoạt động trong Code (Tham chiếu file `src/lib/gemini-cache.ts`):
-Hệ thống cung cấp hàm `setupMilitaryContextCache()`. Bạn có thể:
-1. Đọc file text chứa "Quy tắc Điều lệnh Bộ đội".
-2. Gọi hàm upload lên Google Cache Manager, đặt thời gian sống (TTL) ví dụ 60 phút.
-3. Lấy `cacheName` thu được đem vào API gọi phân tích bình thường.
-*Lưu ý: Mặc định tính năng này đòi hỏi ít nhất 32,768 tokens nội dung thô để Google cho phép lập Cache. Nếu nội dung ngắn dăm ba chữ, Google sẽ từ chối Cache vì vốn chẳng cần thiết tiết kiệm lượng nhỏ như vậy.*
+## 📅 4. Lộ trình phát triển (Roadmap)
+*   [x] Tích hợp AI Gemini phân tích chuyên sâu.
+*   [x] Hệ thống xuất báo cáo PDF chính quy.
+*   [x] Tối ưu hóa giao diện đa nền tảng.
+*   [ ] Dự báo xu hướng tâm lý theo tháng/quý.
+*   [ ] Tích hợp thông báo qua Telegram/Email cho Chỉ huy khi có ca "Nguy cơ".
 
 ---
-*(Xem code triển khai gốc tại các file: `ratelimit.ts`, `api/interview/route.ts`...)*
+*Tài liệu được cập nhật tự động bởi hệ thống Quản lý Tư tưởng Quân đội - 2026*

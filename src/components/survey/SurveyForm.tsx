@@ -87,6 +87,11 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
   const isOnline = useNetworkStatus();
   const [showOfflineAlert, setShowOfflineAlert] = useState(false);
   const [lastCheckedAnswers, setLastCheckedAnswers] = useState<Record<string, string>>({});
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Draft key for localStorage
   const draftKey = `survey_draft_${token || soldier.id}`;
@@ -559,19 +564,19 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
       </div>
 
       {/* ── Header ── */}
-      <div className="px-5 sm:px-8 pt-5 pb-4 border-b border-slate-100 dark:border-white/8 bg-slate-50/60 dark:bg-[#0d1409]/60">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${isCompleted ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-100 dark:border-blue-500/30' : 'bg-emerald-50 dark:bg-[#a3e635]/15 border-emerald-100 dark:border-[#a3e635]/30'}`}>
-              <MessageSquare className={`w-4 h-4 ${isCompleted ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-[#a3e635]'}`} />
+      <div className="px-4 sm:px-8 pt-5 pb-4 border-b border-slate-100 dark:border-white/8 bg-slate-50/60 dark:bg-[#0d1409]/60">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-xl border flex items-center justify-center ${isCompleted ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-100 dark:border-blue-500/30' : 'bg-emerald-50 dark:bg-[#a3e635]/15 border-emerald-100 dark:border-[#a3e635]/30'}`}>
+              <MessageSquare className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isCompleted ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-[#a3e635]'}`} />
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-slate-800 dark:text-white text-sm leading-tight truncate">{soldier.full_name}</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[150px] sm:max-w-xs">{soldier.unit}</p>
+              <p className="font-bold text-slate-800 dark:text-white text-sm leading-tight truncate">{soldier.full_name}</p>
+              <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 truncate">{soldier.unit}</p>
             </div>
           </div>
           {/* Step dots */}
-          <div className="flex items-center gap-1.5 flex-wrap justify-end max-w-[50%]">
+          <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap justify-end max-w-[40%] sm:max-w-[50%]">
             {localQuestions.map((_, i) => (
               <button
                 key={i}
@@ -579,10 +584,10 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
                 onClick={() => setCurrentStep(i)}
                 className={`rounded-full transition-all duration-300 ${
                   i === currentStep
-                    ? (isCompleted ? "w-5 h-2.5 bg-blue-500" : "w-5 h-2.5 bg-emerald-500 dark:bg-[#a3e635]")
+                    ? (isCompleted ? "w-4 h-2 sm:w-5 sm:h-2.5 bg-blue-500" : "w-4 h-2 sm:w-5 sm:h-2.5 bg-emerald-500 dark:bg-[#a3e635]")
                     : answers[localQuestions[i].id]?.trim()
-                    ? (isCompleted ? "w-2.5 h-2.5 bg-blue-300 dark:bg-blue-500/50" : "w-2.5 h-2.5 bg-emerald-300 dark:bg-[#a3e635]/50")
-                    : "w-2.5 h-2.5 bg-slate-200 dark:bg-white/15"
+                    ? (isCompleted ? "w-2 h-2 sm:w-2.5 sm:h-2.5 bg-blue-300 dark:bg-blue-500/50" : "w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-300 dark:bg-[#a3e635]/50")
+                    : "w-2 h-2 sm:w-2.5 sm:h-2.5 bg-slate-200 dark:bg-white/15"
                 }`}
                 title={`Câu ${i + 1}`}
               />
@@ -597,26 +602,41 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
         className="px-5 sm:px-8 pt-7 pb-5 animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col min-h-[300px]"
       >
         {/* Step label */}
-        <div className="flex items-center justify-between mb-4">
-          <p className={`text-xs font-bold uppercase tracking-widest flex items-center gap-2 font-mono ${isCompleted ? 'text-blue-600' : 'text-emerald-600 dark:text-[#a3e635]'}`}>
-            <span className={`inline-flex w-5 h-5 rounded-full items-center justify-center text-[10px] font-bold ${isCompleted ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 dark:bg-[#a3e635]/15 text-emerald-600 dark:text-[#a3e635]'}`}>
-              {currentStep + 1}
+        <div className="flex flex-col mb-5">
+          {isMounted && currentStep === 0 && (
+            <span className="text-emerald-600 dark:text-[#a3e635] text-[15px] font-bold mb-3 animate-in fade-in slide-in-from-left-4 duration-700">
+              {(() => {
+                const hour = new Date().getHours();
+                let timeGreeting = "Chúc đồng chí một ngày tốt lành";
+                if (hour >= 5 && hour < 11) timeGreeting = "Chúc đồng chí buổi sáng huấn luyện tốt";
+                else if (hour >= 11 && hour < 14) timeGreeting = "Chúc đồng chí nghỉ trưa thoải mái";
+                else if (hour >= 14 && hour < 18) timeGreeting = "Chúc đồng chí buổi chiều năng lượng";
+                else if (hour >= 18 || hour < 5) timeGreeting = "Chào đồng chí buổi tối";
+                return `👋 ${timeGreeting}, đồng chí ${soldier.full_name}!`;
+              })()}
             </span>
-            Câu hỏi {currentStep + 1} / {localQuestions.length}
-          </p>
+          )}
+          <div className="flex items-center justify-between">
+            <p className={`text-xs font-bold uppercase tracking-widest flex items-center gap-2 font-mono ${isCompleted ? 'text-blue-600' : 'text-emerald-600 dark:text-[#a3e635]'}`}>
+              <span className={`inline-flex w-5 h-5 rounded-full items-center justify-center text-[10px] font-bold ${isCompleted ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 dark:bg-[#a3e635]/15 text-emerald-600 dark:text-[#a3e635]'}`}>
+                {currentStep + 1}
+              </span>
+              Câu hỏi {currentStep + 1} / {localQuestions.length}
+            </p>
           {isAI && (
             <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-tight">
               <Bot size={13} /> Câu hỏi bổ sung
             </span>
           )}
+          </div>
         </div>
 
         {/* Question text card */}
-        <div className={`relative p-5 rounded-2xl border transition-all duration-300 mb-6 ${isAI ? 'bg-amber-50/30 dark:bg-amber-500/5 border-amber-100/50 dark:border-amber-500/20' : 'bg-slate-50/50 dark:bg-white/[0.02] border-slate-100 dark:border-white/5'}`}>
-          <div className="absolute top-2 right-3 opacity-10 dark:opacity-5">
+        <div className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-300 mb-5 sm:mb-6 ${isAI ? 'bg-amber-50/30 dark:bg-amber-500/5 border-amber-100/50 dark:border-amber-500/20 shadow-sm' : 'bg-slate-50/50 dark:bg-white/[0.02] border-slate-100 dark:border-white/5 shadow-sm'}`}>
+          <div className="absolute top-2 right-3 opacity-10 dark:opacity-5 hidden sm:block">
              <MessageSquare size={64} />
           </div>
-          <h3 className={`relative z-10 text-xl sm:text-2xl font-bold leading-relaxed ${isAI ? 'text-amber-700 dark:text-amber-400' : 'text-slate-800 dark:text-white'}`}>
+          <h3 className={`relative z-10 text-lg sm:text-2xl font-bold leading-relaxed ${isAI ? 'text-amber-700 dark:text-amber-400' : 'text-slate-800 dark:text-white'}`}>
             {currentQ.content}
           </h3>
         </div>
@@ -668,18 +688,18 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
       </div>
 
       {/* ── Footer navigation ── */}
-      <div className="flex items-center justify-between px-5 sm:px-8 py-5 border-t border-slate-100 dark:border-white/8 bg-slate-50/40 dark:bg-[#0a0f08]/60 gap-3">
+      <div className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-5 border-t border-slate-100 dark:border-white/8 bg-slate-50/40 dark:bg-[#0a0f08]/60 gap-3">
         <button
           onClick={handlePrev}
           disabled={currentStep === 0}
-          className="px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/8 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-2 sm:px-4 sm:py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/8 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Quay lại
+          <ArrowLeft className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Quay lại</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 sm:flex-none justify-end">
           {/* Answered count badge */}
-          <span className="hidden sm:flex text-xs text-slate-400 dark:text-slate-500 items-center gap-1.5">
+          <span className="hidden lg:flex text-xs text-slate-400 dark:text-slate-500 items-center gap-1.5 mr-2">
             <CheckCircle2 className={`w-3.5 h-3.5 ${isCompleted ? 'text-blue-500' : 'text-emerald-500 dark:text-[#a3e635]'}`} />
             {isCompleted ? "Đã xem hết" : `${answeredCount}/${localQuestions.length} đã trả lời`}
           </span>
@@ -687,21 +707,21 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
           {isLastStep || isCompleted ? (
             <button
               onClick={isChecking ? undefined : (isCompleted ? () => setPhase("preview") : goPreview)}
-              className={`px-6 py-2.5 rounded-xl flex items-center gap-2 text-sm font-bold transition-all shadow-md ${
+              className={`flex-1 sm:flex-none px-5 sm:px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all shadow-md ${
                 isCompleted 
                   ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200" 
                   : "bg-emerald-600 hover:bg-emerald-700 dark:bg-[#a3e635] dark:hover:bg-[#84cc16] text-white dark:text-[#0a0f08] shadow-emerald-200 dark:shadow-[#a3e635]/20"
               }`}
             >
-              <Eye className="w-4 h-4" /> {isCompleted ? "Xem tổng thể" : "Xem lại & Nộp bài"}
+              <Eye className="w-4 h-4" /> {isCompleted ? "Xem tổng thể" : <><span className="hidden sm:inline">Xem lại & </span>Nộp bài</>}
             </button>
           ) : (
             <button
               onClick={handleNext}
               disabled={!canNext || isChecking}
-              className="px-6 py-2.5 rounded-xl flex items-center gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 dark:bg-[#a3e635] dark:hover:bg-[#84cc16] text-white dark:text-[#0a0f08] disabled:opacity-40 disabled:cursor-not-allowed transition-all min-w-[140px] justify-center shadow-md shadow-emerald-200 dark:shadow-[#a3e635]/20"
+              className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl flex items-center gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 dark:bg-[#a3e635] dark:hover:bg-[#84cc16] text-white dark:text-[#0a0f08] disabled:opacity-40 disabled:cursor-not-allowed transition-all min-w-[120px] sm:min-w-[140px] justify-center shadow-md shadow-emerald-200 dark:shadow-[#a3e635]/20"
             >
-              {isChecking ? <DotPulse /> : <><Sparkles className="w-4 h-4" /> Tiếp theo <ArrowRight className="w-4 h-4" /></>}
+              {isChecking ? <DotPulse /> : <><Sparkles className="w-4 h-4" /> <span className="hidden sm:inline">Tiếp theo</span> <ArrowRight className="w-4 h-4" /></>}
             </button>
           )}
         </div>

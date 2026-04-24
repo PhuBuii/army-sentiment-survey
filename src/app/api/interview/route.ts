@@ -41,8 +41,7 @@ export async function POST(req: Request) {
 
     const { object } = await generateObject({
       model: google("models/gemini-2.5-flash"), 
-      maxOutputTokens: 250, 
-      maxRetries: 3, // Tự động thử lại nếu gặp lỗi 503 hoặc quá tải
+      maxRetries: 3, 
       system: systemPrompt,
       schema: z.object({
         needsFollowUp: z.boolean().describe("Trả về true nếu phát hiện tâm lý bất ổn cần khơi gợi thêm."),

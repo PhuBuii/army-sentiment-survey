@@ -71,11 +71,36 @@ export async function submitSurveyAndAnalyze(
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Ưu tiên bản 2.5-flash vì đã có Cache, sau đó mới thử các bản preview/lite nếu bị quá tải
-    const modelsToTry = ["gemini-2.5-flash", "gemini-3.1-flash-lite-preview"];
+    // Cập nhật danh sách model dự phòng mới nhất theo tài liệu từ Google (Tháng 4/2026)
+    // Ưu tiên bản 2.5-flash vì đã có Cache, sau đó chuyển sang các bản ổn định hoặc preview mạnh mẽ.
+    const modelsToTry = [
+      "gemini-2.5-flash",              // Ổn định, hỗ trợ Cache (Ưu tiên số 1)
+      "gemini-2.5-pro",                // Ổn định, siêu thông minh (Dự phòng số 2)
+      "gemini-3.1-pro-preview",        // Bản Preview mới nhất, suy luận logic phức tạp
+      "gemini-3-flash-preview",        // Bản Flash mới, tối ưu chi phí và tốc độ
+      "gemini-3.1-flash-lite-preview"  // Nhanh nhất, chi phí cực thấp (Dự phòng cuối cùng)
+    ];
+    // 2. Lấy Cache Name động từ Supabase (được cập nhật tự động bởi Cron Job)
+    let cacheName: string | null = null;
+    try {
+      const adminClient = getAdminClient();
+      const { data: setting } = await adminClient
+        .from("app_settings")
+        .select("value")
+        .eq("id", "GEMINI_CACHE_NAME")
+        .single();
+      if (setting?.value) {
+        cacheName = setting.value;
+        console.log("[AI] Cache Name loaded from DB:", cacheName);
+      }
+    } catch {
+      // Fallback: đọc từ env nếu DB không có
+      cacheName = process.env.GEMINI_CACHE_NAME || null;
+      console.warn("[AI] Không đọc được Cache từ DB, dùng env fallback.");
+    }
+
     let aiData = null;
     let lastError = null;
-
     for (const modelName of modelsToTry) {
       let retries = 0;
       const maxRetries = 2;
@@ -84,34 +109,47 @@ export async function submitSurveyAndAnalyze(
         try {
           console.log(`Trying model: ${modelName} (Attempt ${retries + 1})`);
           let model;
-          const cacheName = process.env.GEMINI_CACHE_NAME;
           
           // CRITICAL: Context Caching only works if the model name matches exactly what was used to create the cache
-          // Usually, the cache is created with a specific stable model like gemini-1.5-flash or gemini-2.5-flash.
           const isCacheCompatible = cacheName && (modelName === "gemini-2.5-flash" || modelName === "models/gemini-2.5-flash");
 
           if (isCacheCompatible) {
             model = genAI.getGenerativeModel({ 
               model: modelName,
-              cachedContent: { name: cacheName } as any
-            });
+              cachedContent: cacheName
+            } as any);
           } else {
             model = genAI.getGenerativeModel({ model: modelName });
           }
           
+          const schema = {
+            type: "object",
+            properties: {
+              score: { type: "number", description: "Điểm số từ 0 đến 100" },
+              status: { type: "string", description: "Chỉ chọn 1 trong 3 trạng thái: 'An tâm' | 'Dao động' | 'Nguy cơ'" },
+              summary: { type: "string", description: "Nhận xét ngắn gọn 1-2 câu" },
+              advice: { type: "string", description: "Lời khuyên hướng xử lý cho chỉ huy" },
+              dialogue_script: { type: "string", description: "Gợi ý 3-5 câu hỏi cụ thể để chỉ huy dùng khi trò chuyện 1-1 với chiến sĩ này" }
+            },
+            required: ["score", "status", "summary", "advice", "dialogue_script"]
+          };
+
           const prompt = `Bạn là chuyên gia tâm lý quân đội. Hãy phân tích 5 câu trả lời này để đánh giá tư tưởng chiến sĩ.
 Dữ liệu đầu vào:
 ${JSON.stringify(responses, null, 2)}
 
-Luôn trả về duy nhất định dạng JSON thuần (không bọc trong markdown block), với cấu trúc chính xác sau:
-{
-  "score": <điểm số từ 0 đến 100, số nguyên>,
-  "status": "<chỉ chọn 1 trong 3 trạng thái: 'An tâm' | 'Dao động' | 'Nguy cơ'>",
-  "summary": "<nhận xét ngắn gọn 1-2 câu>",
-  "advice": "<lời khuyên hướng xử lý cho chỉ huy>"
-}`;
+Yêu cầu bổ sung: Dựa trên những gì chiến sĩ chia sẻ, hãy soạn một "Kịch bản đối thoại" gồm các câu hỏi gợi mở để cán bộ chỉ huy có thể dùng để bắt đầu buổi trò chuyện 1-1 một cách tự nhiên và hiệu quả nhất.
 
-          const result = await model.generateContent(prompt);
+Hãy xuất dữ liệu dưới dạng JSON thuần theo đúng cấu trúc yêu cầu.`;
+
+          const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              // Chỉ áp dụng schema cho các model 1.5 để tránh lỗi 400 ở model cũ
+              ...(modelName.includes("1.5") ? { responseSchema: schema as any } : {}),
+            }
+          });
           let textResult = result.response.text();
           
           // Clean potential markdown quotes
@@ -150,14 +188,29 @@ Luôn trả về duy nhất định dạng JSON thuần (không bọc trong mark
     const adminSupabase = getAdminClient();
 
     // 2.1 Save submission
-    const { error: insertError } = await adminSupabase.from("submissions").insert({
+    let { error: insertError } = await adminSupabase.from("submissions").insert({
       soldier_id: soldierId,
       responses: responses,
       ai_score: aiData.score,
       ai_status: aiData.status,
       ai_summary: aiData.summary,
       ai_advice: aiData.advice,
+      ai_dialogue_script: aiData.dialogue_script,
     });
+
+    // Fallback: If insert fails (possibly due to missing column ai_dialogue_script), try without it
+    if (insertError && insertError.message.includes("ai_dialogue_script")) {
+      console.warn("Retrying insert without ai_dialogue_script column...");
+      const { error: retryError } = await adminSupabase.from("submissions").insert({
+        soldier_id: soldierId,
+        responses: responses,
+        ai_score: aiData.score,
+        ai_status: aiData.status,
+        ai_summary: aiData.summary,
+        ai_advice: aiData.advice,
+      });
+      insertError = retryError;
+    }
 
     if (insertError) throw insertError;
 

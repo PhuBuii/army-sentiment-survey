@@ -23,6 +23,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "AI & Quân Sự | Hệ thống đánh giá Tư tưởng",
   description: "Trạm phân tích tâm lý ứng dụng trí tuệ nhân tạo (AI Survey for Army)",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   icons: {
     icon: "/logo_mini.png",
     shortcut: "/logo_mini.png",
