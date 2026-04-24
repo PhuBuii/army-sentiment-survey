@@ -23,7 +23,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExcelUploadDialog } from "@/components/ui/ExcelUploadDialog";
 import {
   ClipboardCopy, Loader2, Upload, UsersRound, Eye, MessageSquare, QrCode,
-  Brain, Edit2, CheckCircle2, ChevronDown, FileText, UserPlus, Trash2, X
+  Brain, Edit2, CheckCircle2, ChevronDown, FileText, UserPlus, Trash2, X, Search, Filter
 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { useSearchParams } from "next/navigation";
@@ -72,24 +72,25 @@ export default function SoldiersPage() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Detail Dialog
   const [selected, setSelected]     = useState<Soldier | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Edit/Create Dialog
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Soldier | null>(null);
   const [editName, setEditName] = useState("");
   const [editUnit, setEditUnit] = useState("");
   const [savingSoldier, setSavingSoldier] = useState(false);
 
-  // Edit status state
   const [editingStatus, setEditingStatus] = useState(false);
   const [newStatus, setNewStatus]         = useState<Status>("An tâm");
   const [newScore, setNewScore]           = useState<number>(0);
   const [newAdminNote, setNewAdminNote]   = useState("");
   const [saving, setSaving]               = useState(false);
   const [saveMsg, setSaveMsg]             = useState("");
+
+  // Search & Filter
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "An tâm" | "Dao động" | "Nguy cơ">("all");
 
   const searchParams = useSearchParams();
   const currentPage = parseInt(searchParams.get("page") || "1", 10);
@@ -106,24 +107,30 @@ export default function SoldiersPage() {
         .from("soldiers")
         .select("*, submissions(*)")
         .order("created_at", { ascending: false });
-      
-      if (error) {
-        console.error("Fetch data error:", error);
-        setSoldiers([]);
-      } else {
-        setSoldiers((data as Soldier[]) || []);
-      }
-    } catch (err) {
-      console.error("Unexpected error in fetchData:", err);
-    } finally {
-      setLoading(false);
-    }
+      if (error) { console.error(error); setSoldiers([]); }
+      else setSoldiers((data as Soldier[]) || []);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const totalPages = Math.ceil(soldiers.length / ITEMS_PER_PAGE);
-  const paginatedSoldiers = soldiers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  // Client-side filtering
+  const filteredSoldiers = soldiers.filter(s => {
+    const matchesSearch = searchQuery.trim() === "" ||
+      s.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.unit.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = (() => {
+      if (statusFilter === "all") return true;
+      if (statusFilter === "pending") return !s.is_completed;
+      if (!s.is_completed) return false;
+      return s.submissions?.[0]?.ai_status === statusFilter;
+    })();
+    return matchesSearch && matchesStatus;
+  });
+
+  const totalPages = Math.ceil(filteredSoldiers.length / ITEMS_PER_PAGE);
+  const paginatedSoldiers = filteredSoldiers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
   const sub = selected?.submissions?.[0];
 
   const openDetail = (soldier: Soldier) => {
@@ -140,14 +147,12 @@ export default function SoldiersPage() {
   const handleSaveStatus = async () => {
     const sub = selected?.submissions?.[0];
     if (!sub) return;
-    setSaving(true);
-    setSaveMsg("");
+    setSaving(true); setSaveMsg("");
     const res = await updateSubmissionStatus(sub.id, newStatus, newScore, newAdminNote);
     setSaving(false);
-    if (res.error) {
-      setSaveMsg("❌ Lỗi: " + res.error);
-    } else {
-      setSaveMsg("✅ Đã cập nhật phân loại thành công!");
+    if (res.error) setSaveMsg("❌ " + res.error);
+    else {
+      setSaveMsg("✅ Đã cập nhật!");
       setEditingStatus(false);
       await fetchData();
       setSelected(prev => {
@@ -172,68 +177,44 @@ export default function SoldiersPage() {
         const supabase = createClient();
         const { error } = await supabase.from("soldiers").insert(payload);
         if (error) throw error;
-        alert(`Đã upload thành công ${payload.length} chiến sĩ.`);
+        toast.success(`Đã thêm ${payload.length} chiến sĩ.`);
         fetchData();
         setUploadDialogOpen(false);
       } else {
-        alert("File không đúng định dạng (cần cột full_name và unit).");
+        toast.error("File sai định dạng (cần cột full_name và unit).");
       }
-    } catch { alert("Lỗi upload, vui lòng thử lại."); }
+    } catch { toast.error("Lỗi upload, thử lại."); }
     finally { setUploading(false); }
   };
 
   const copyLink = (token: string) => {
     const url = `${window.location.origin}/survey/${token}`;
     navigator.clipboard.writeText(url);
-    toast.success("Đã copy link! Gửi cho chiến sĩ ngay.", { description: url });
+    toast.success("Đã sao chép link!", { description: url });
   };
 
   const handleCreateOrUpdateSoldier = async () => {
     if (!editName || !editUnit) return;
     setSavingSoldier(true);
-    let res;
-    if (editTarget) {
-      res = await updateSoldier(editTarget.id, editName, editUnit);
-    } else {
-      res = await createSoldier(editName, editUnit);
-    }
+    const res = editTarget
+      ? await updateSoldier(editTarget.id, editName, editUnit)
+      : await createSoldier(editName, editUnit);
     setSavingSoldier(false);
-    if (res.error) {
-      alert("Lỗi: " + res.error);
-    } else {
-      setEditDialogOpen(false);
-      fetchData();
-    }
+    if (res.error) toast.error("Lỗi: " + res.error);
+    else { setEditDialogOpen(false); fetchData(); }
   };
 
   const openEditDialog = (soldier?: Soldier) => {
-    if (soldier) {
-      setEditTarget(soldier);
-      setEditName(soldier.full_name);
-      setEditUnit(soldier.unit);
-    } else {
-      setEditTarget(null);
-      setEditName("");
-      setEditUnit("");
-    }
+    if (soldier) { setEditTarget(soldier); setEditName(soldier.full_name); setEditUnit(soldier.unit); }
+    else { setEditTarget(null); setEditName(""); setEditUnit(""); }
     setEditDialogOpen(true);
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === paginatedSoldiers.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(paginatedSoldiers.map(s => s.id));
-    }
+    setSelectedIds(selectedIds.length === paginatedSoldiers.length ? [] : paginatedSoldiers.map(s => s.id));
   };
-
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const handleDeleteSelected = async () => {
-    if (selectedIds.length === 0) return;
-    setIsConfirmOpen(true);
   };
 
   const handleActualDelete = async () => {
@@ -241,195 +222,192 @@ export default function SoldiersPage() {
     const res = await deleteSoldiers(selectedIds);
     setIsDeleting(false);
     setIsConfirmOpen(false);
-    if (res.error) {
-      toast.error("Lỗi: " + res.error);
-    } else {
-      toast.success("Đã xoá quân nhân thành công");
-      setSelectedIds([]);
-      fetchData();
-    }
+    if (res.error) toast.error("Lỗi: " + res.error);
+    else { toast.success("Đã xoá thành công"); setSelectedIds([]); fetchData(); }
   };
 
   const handleExportQRExcel = async () => {
     const pendingList = soldiers.filter(s => !s.is_completed);
-    if (pendingList.length === 0) {
-      toast.warning("Chưa có chiến sĩ nào cần khảo sát (tất cả đã nộp bài).");
-      return;
-    }
-
-    const toastId = toast.loading(`Đang khởi tạo mã QR cho ${pendingList.length} chiến sĩ...`);
+    if (pendingList.length === 0) { toast.warning("Tất cả chiến sĩ đã nộp bài."); return; }
+    const toastId = toast.loading(`Đang tạo QR cho ${pendingList.length} chiến sĩ...`);
     try {
       const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet("DS Khao Sat", {
-        views: [{ state: 'frozen', ySplit: 1 }]
-      });
-
+      const sheet = workbook.addWorksheet("DS Khao Sat", { views: [{ state: 'frozen', ySplit: 1 }] });
       sheet.columns = [
         { header: "STT", key: "stt", width: 8 },
         { header: "Họ và Tên", key: "name", width: 30 },
         { header: "Đơn vị", key: "unit", width: 35 },
-        { header: "Mã QR Quy Quét", key: "qr", width: 20 },
+        { header: "Mã QR", key: "qr", width: 20 },
         { header: "Link dự phòng", key: "link", width: 50 },
       ];
-
-      // Format header
       sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
       sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FF0EA5E9" } };
       sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
       sheet.getRow(1).height = 30;
-
       for (let i = 0; i < pendingList.length; i++) {
         const s = pendingList[i];
         const link = `${window.location.origin}/survey/${s.token}`;
-
-        const row = sheet.addRow({
-          stt: i + 1,
-          name: s.full_name,
-          unit: s.unit,
-          link: link,
-        });
-        
+        const row = sheet.addRow({ stt: i + 1, name: s.full_name, unit: s.unit, link });
         row.height = 110;
         row.alignment = { vertical: 'middle', wrapText: true };
-
-        // Tạo Base64 QR Code
-        const qrBase64 = await QRCode.toDataURL(link, { width: 140, margin: 1, color: { dark: '#0a0f08', light: '#ffffff' } });
-        
-        const imageId = workbook.addImage({
-          base64: qrBase64,
-          extension: 'png',
-        });
-
-        sheet.addImage(imageId, {
-          tl: { col: 3, row: i + 1 },
-          ext: { width: 130, height: 130 },
-        });
+        const qrBase64 = await QRCode.toDataURL(link, { width: 140, margin: 1 });
+        const imageId = workbook.addImage({ base64: qrBase64, extension: 'png' });
+        sheet.addImage(imageId, { tl: { col: 3, row: i + 1 }, ext: { width: 130, height: 130 } });
       }
-
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
+      const a = document.createElement("a"); a.href = url;
       a.download = `QR_KhaoSat_${new Date().toISOString().slice(0,10)}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      toast.success("Đã xuất file Excel kèm mã QR thành công!", { id: toastId });
-    } catch (err) {
-      console.error(err);
-      toast.error("Đã xảy ra lỗi trong quá trình tạo Excel.", { id: toastId });
-    }
+      a.click(); URL.revokeObjectURL(url);
+      toast.success("Xuất file Excel thành công!", { id: toastId });
+    } catch (err) { console.error(err); toast.error("Lỗi tạo Excel.", { id: toastId }); }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <UsersRound className="text-blue-500" /> Hồ Sơ Quân Nhân
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <UsersRound size={20} className="text-blue-500" /> Hồ Sơ Quân Nhân
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Quản lý danh sách, xem chi tiết câu trả lời và điều chỉnh kết quả AI.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Quản lý danh sách, xem chi tiết và điều chỉnh kết quả AI.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {selectedIds.length > 0 && (
-            <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="flex items-center gap-2">
-              <Trash2 className="w-4 h-4" /> Xoá ({selectedIds.length})
+            <Button variant="destructive" size="sm" onClick={() => setIsConfirmOpen(true)} className="h-9 rounded-xl gap-1.5">
+              <Trash2 className="w-3.5 h-3.5" /> Xoá ({selectedIds.length})
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => openEditDialog()} className="bg-white dark:bg-transparent border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 dark:hover:bg-white/5 gap-2">
-            <UserPlus className="w-4 h-4" /> Thêm Chiến sĩ
+          <Button variant="outline" size="sm" onClick={() => openEditDialog()}
+            className="h-9 rounded-xl bg-white dark:bg-transparent border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 gap-1.5">
+            <UserPlus className="w-3.5 h-3.5" /> Thêm mới
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportQRExcel} className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 gap-2">
-            <QrCode className="w-4 h-4" /> DS Chờ khảo sát (QR Array)
+          <Button variant="outline" size="sm" onClick={handleExportQRExcel}
+            className="h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 gap-1.5">
+            <QrCode className="w-3.5 h-3.5" /> Xuất QR
           </Button>
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-md transition-colors"
-            onClick={() => setUploadDialogOpen(true)}
-            disabled={uploading}
-          >
-            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            Tạo danh sách từ Excel
+          <Button size="sm" onClick={() => setUploadDialogOpen(true)} disabled={uploading}
+            className="h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white gap-1.5">
+            {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            Import Excel
           </Button>
         </div>
       </div>
 
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row gap-2.5">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Tìm tên hoặc đơn vị..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full h-9 pl-9 pr-4 text-sm bg-white dark:bg-[#161b22] border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:border-blue-500 transition-colors"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="relative">
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+            className="h-9 pl-9 pr-8 text-sm bg-white dark:bg-[#161b22] border border-slate-200 dark:border-white/10 rounded-xl text-slate-700 dark:text-slate-300 outline-none appearance-none cursor-pointer"
+          >
+            <option value="all">Tất cả</option>
+            <option value="pending">⏳ Chờ làm bài</option>
+            <option value="An tâm">✅ An tâm</option>
+            <option value="Dao động">⚠️ Dao động</option>
+            <option value="Nguy cơ">🔴 Nguy cơ</option>
+          </select>
+        </div>
+      </div>
+
       {/* Table */}
-      <Card className="shadow-sm border-slate-200 dark:border-white/10 dark:bg-[#0a0f08]/50 overflow-hidden">
-        <CardHeader className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 py-4">
-          <CardTitle className="text-sm sm:text-base text-slate-900 dark:text-white">
-            Toàn bộ Chiến sĩ ({soldiers.length})
+      <Card className="shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22] overflow-hidden">
+        <CardHeader className="bg-slate-50/80 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/8 py-3 px-4">
+          <CardTitle className="text-sm font-semibold text-slate-600 dark:text-slate-400 flex items-center justify-between">
+            <span>{filteredSoldiers.length} / {soldiers.length} chiến sĩ</span>
+            {(searchQuery || statusFilter !== "all") && (
+              <button onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+                className="text-xs text-slate-400 hover:text-red-500 flex items-center gap-1">
+                <X className="w-3 h-3" /> Bỏ lọc
+              </button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table className="min-w-[700px]">
+            <Table className="min-w-[640px]">
               <TableHeader>
-                <TableRow className="bg-slate-50/50 dark:bg-white/5 border-slate-100 dark:border-white/5">
-                  <TableHead className="w-10">
+                <TableRow className="bg-slate-50/50 dark:bg-white/[0.02] border-slate-100 dark:border-white/8 hover:bg-transparent dark:hover:bg-transparent">
+                  <TableHead className="w-10 py-3">
                     <Checkbox checked={selectedIds.length > 0 && selectedIds.length === paginatedSoldiers.length} onCheckedChange={toggleSelectAll} />
                   </TableHead>
-                  <TableHead className="w-12 text-center py-3">STT</TableHead>
-                  <TableHead className="py-3">Họ và Tên</TableHead>
-                  <TableHead>Đơn vị</TableHead>
-                  <TableHead>Trạng thái AI</TableHead>
-                  <TableHead>Điểm</TableHead>
-                  <TableHead className="text-right whitespace-nowrap">Thao tác</TableHead>
+                  <TableHead className="w-10 text-center py-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">#</TableHead>
+                  <TableHead className="py-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Họ tên</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Đơn vị</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Trạng thái</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Điểm</TableHead>
+                  <TableHead className="text-right text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-48 text-center">
-                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-500" />
+                    <TableCell colSpan={7} className="h-40 text-center">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-500" />
                     </TableCell>
                   </TableRow>
                 ) : paginatedSoldiers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-48 text-center text-slate-400 dark:text-slate-500 text-sm">
-                      Chưa có danh sách chiến sĩ.
+                    <TableCell colSpan={7} className="h-40 text-center text-sm text-slate-400 dark:text-slate-500">
+                      Không tìm thấy kết quả.
                     </TableCell>
                   </TableRow>
                 ) : paginatedSoldiers.map((s, idx) => {
                   const sub = s.submissions?.[0];
                   return (
-                    <TableRow key={s.id} className="hover:bg-slate-50 dark:hover:bg-white/5 border-slate-100 dark:border-white/5">
-                      <TableCell>
+                    <TableRow key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-white/[0.03] border-slate-100 dark:border-white/8">
+                      <TableCell className="py-3">
                         <Checkbox checked={selectedIds.includes(s.id)} onCheckedChange={() => toggleSelect(s.id)} />
                       </TableCell>
-                      <TableCell className="text-center font-medium text-slate-500 text-xs">
+                      <TableCell className="text-center font-mono text-xs text-slate-400 py-3">
                         {(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}
                       </TableCell>
-                      <TableCell className="font-medium text-slate-900 dark:text-slate-200 text-sm whitespace-nowrap">{s.full_name}</TableCell>
-                      <TableCell className="text-slate-500 dark:text-slate-400 text-sm max-w-[200px] truncate" title={s.unit}>{s.unit}</TableCell>
-                      <TableCell>
+                      <TableCell className="font-medium text-slate-900 dark:text-slate-100 text-sm py-3 whitespace-nowrap">{s.full_name}</TableCell>
+                      <TableCell className="text-slate-500 dark:text-slate-400 text-xs max-w-[180px] truncate py-3" title={s.unit}>{s.unit}</TableCell>
+                      <TableCell className="py-3">
                         {!s.is_completed
-                          ? <span className="text-xs text-slate-500 dark:text-slate-400 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700">Chờ làm bài</span>
-                          : sub ? <StatusBadge status={sub.ai_status} /> : <span className="text-xs text-slate-400">—</span>
+                          ? <span className="text-xs text-slate-400 dark:text-slate-500 px-2 py-0.5 bg-slate-100 dark:bg-white/5 rounded-full">Chờ làm bài</span>
+                          : sub ? <StatusBadge status={sub.ai_status} /> : <span className="text-slate-300">—</span>
                         }
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-slate-600 dark:text-slate-300">
+                      <TableCell className="font-mono text-sm text-slate-600 dark:text-slate-300 py-3">
                         {sub ? `${sub.ai_score}/100` : "—"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(s)} className="h-8 w-8 text-slate-400 hover:text-blue-500">
+                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(s)} className="h-8 w-8 text-slate-400 hover:text-blue-500 rounded-lg">
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
                           {s.is_completed ? (
                             <Button variant="outline" size="sm" onClick={() => openDetail(s)}
-                              className="h-8 text-xs bg-white dark:bg-transparent border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 dark:hover:bg-white/5 gap-1.5 px-3">
-                              <Eye className="w-3.5 h-3.5" /> Chi tiết
+                              className="h-8 text-xs rounded-lg bg-white dark:bg-transparent border-slate-200 dark:border-white/10 gap-1">
+                              <Eye className="w-3 h-3" /> Xem
                             </Button>
                           ) : (
                             <Button variant="ghost" size="sm" onClick={() => copyLink(s.token)}
-                              className="h-8 text-xs text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 gap-1.5 px-3">
-                              <ClipboardCopy className="w-3.5 h-3.5" /> Link
+                              className="h-8 text-xs text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 gap-1">
+                              <ClipboardCopy className="w-3 h-3" /> Link
                             </Button>
                           )}
                         </div>
@@ -443,185 +421,156 @@ export default function SoldiersPage() {
         </CardContent>
       </Card>
 
-      {!loading && totalPages >= 1 && (
-        <Pagination totalPages={totalPages} />
-      )}
+      {!loading && totalPages >= 1 && <Pagination totalPages={totalPages} />}
 
-      {/* ── Add/Edit Soldier Dialog ── */}
+      {/* Add/Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md w-[96vw] rounded-2xl dark:bg-[#0d1109] dark:border-white/10">
+        <DialogContent className="max-w-md w-[96vw] rounded-2xl bg-white dark:bg-[#161b22] dark:border-white/10">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-blue-500" /> {editTarget ? "Sửa thông tin" : "Thêm Chiến sĩ"}
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-blue-500" /> {editTarget ? "Sửa thông tin" : "Thêm chiến sĩ"}
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-400 mt-1">
-              Nhập thông tin cá nhân của quân nhân để tạo hồ sơ hoặc cập nhật.
+            <DialogDescription className="text-xs text-slate-400">
+              {editTarget ? `Đang sửa: ${editTarget.full_name}` : "Tạo hồ sơ chiến sĩ mới"}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Họ và Tên</Label>
-              <Input
-                placeholder="VD: Nguyễn Văn A"
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                className="h-10 text-sm bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl"
-              />
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Họ tên</Label>
+              <Input placeholder="Nguyễn Văn A" value={editName} onChange={e => setEditName(e.target.value)}
+                className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Đơn vị</Label>
-              <Input
-                placeholder="VD: Đại đội 1, Tiểu đoàn 2"
-                value={editUnit}
-                onChange={e => setEditUnit(e.target.value)}
-                className="h-10 text-sm bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl"
-              />
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Đơn vị</Label>
+              <Input placeholder="Đại đội 1" value={editUnit} onChange={e => setEditUnit(e.target.value)}
+                className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
             </div>
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1 dark:border-white/10" onClick={() => setEditDialogOpen(false)}>Huỷ</Button>
-              <Button
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white gap-2"
-                onClick={handleCreateOrUpdateSoldier}
-                disabled={savingSoldier || !editName || !editUnit}
-              >
-                {savingSoldier ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                {editTarget ? "Cập nhật" : "Lưu hồ sơ"}
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1 h-10 rounded-xl dark:border-white/10" onClick={() => setEditDialogOpen(false)}>Huỷ</Button>
+              <Button className="flex-1 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
+                onClick={handleCreateOrUpdateSoldier} disabled={savingSoldier || !editName || !editUnit}>
+                {savingSoldier ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                {editTarget ? "Cập nhật" : "Lưu"}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* ── Detail Dialog ── */}
+      {/* Detail Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl w-[96vw] rounded-2xl dark:bg-[#0d1109] dark:border-white/10 overflow-hidden p-0 gap-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-white/10 bg-slate-50/60 dark:bg-[#1a2315]/40 text-left">
-            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
-              <UsersRound className="w-5 h-5 text-blue-500 shrink-0" />
-              Hồ Sơ Tư Tưởng — {selected?.full_name}
+        <DialogContent className="max-w-2xl w-[96vw] rounded-2xl bg-white dark:bg-[#161b22] dark:border-white/10 overflow-hidden p-0 gap-0">
+          <DialogHeader className="px-6 pt-5 pb-4 border-b border-slate-100 dark:border-white/8 bg-slate-50/60 dark:bg-white/[0.02] text-left">
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <UsersRound className="w-4 h-4 text-blue-500 shrink-0" />
+              {selected?.full_name}
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-              {selected?.unit}
-            </DialogDescription>
+            <DialogDescription className="text-xs text-slate-400 mt-0.5">{selected?.unit}</DialogDescription>
           </DialogHeader>
 
           {sub ? (
-            <div className="max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4 p-6 border-b border-slate-100 dark:border-white/8">
-                <div className="bg-slate-50 dark:bg-white/5 rounded-xl p-4 flex flex-col items-center border border-slate-100 dark:border-white/8">
-                  <span className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">Điểm tâm lý</span>
+            <div className="max-h-[72vh] overflow-y-auto">
+              {/* Score & Status */}
+              <div className="grid grid-cols-2 gap-3 p-5 border-b border-slate-100 dark:border-white/8">
+                <div className="bg-slate-50 dark:bg-white/[0.04] rounded-xl p-4 flex flex-col items-center border border-slate-100 dark:border-white/8">
+                  <span className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold mb-2">Điểm tâm lý</span>
                   <span className="text-4xl font-black text-slate-800 dark:text-white">
                     {editingStatus ? (
-                      <input
-                        type="number" min={0} max={100}
-                        value={newScore}
-                        onChange={e => setNewScore(Number(e.target.value))}
-                        className="w-20 text-center text-3xl font-black bg-transparent border-b-2 border-emerald-400 dark:border-[#a3e635] outline-none text-slate-800 dark:text-white"
-                      />
+                      <input type="number" min={0} max={100} value={newScore} onChange={e => setNewScore(Number(e.target.value))}
+                        className="w-20 text-center text-3xl font-black bg-transparent border-b-2 border-emerald-400 outline-none text-slate-800 dark:text-white" />
                     ) : sub.ai_score}
-                    <span className="text-base font-medium text-slate-400">/100</span>
+                    <span className="text-sm font-medium text-slate-400">/100</span>
                   </span>
                 </div>
-                <div className="bg-slate-50 dark:bg-white/5 rounded-xl p-4 flex flex-col items-center border border-slate-100 dark:border-white/8">
-                  <span className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-3">Phân loại AI</span>
+                <div className="bg-slate-50 dark:bg-white/[0.04] rounded-xl p-4 flex flex-col items-center border border-slate-100 dark:border-white/8">
+                  <span className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold mb-3">Phân loại AI</span>
                   {editingStatus ? (
-                    <div className="flex flex-col gap-2 w-full">
+                    <div className="flex flex-col gap-1.5 w-full">
                       {STATUS_OPTIONS.map(s => (
                         <button key={s} onClick={() => setNewStatus(s)}
-                          className={`text-sm py-1.5 rounded-lg border font-semibold transition-colors ${newStatus === s ? "bg-emerald-500 dark:bg-[#a3e635] text-white dark:text-[#0a0f08] border-transparent" : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"}`}>
+                          className={`text-sm py-1 rounded-lg border font-semibold transition-colors ${newStatus === s ? "bg-emerald-500 dark:bg-emerald-500 text-white border-transparent" : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5"}`}>
                           {s}
                         </button>
                       ))}
                     </div>
-                  ) : (
-                    <StatusBadge status={sub.ai_status} />
-                  )}
+                  ) : <StatusBadge status={sub.ai_status} />}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 dark:border-white/8 bg-slate-50/30 dark:bg-white/2">
+              {/* Edit bar */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-white/8 bg-slate-50/30 dark:bg-white/[0.01]">
                 {saveMsg && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{saveMsg}</span>}
                 <div className="flex gap-2 ml-auto">
                   {editingStatus ? (
                     <>
                       <Button size="sm" variant="outline" onClick={() => { setEditingStatus(false); setSaveMsg(""); }}
-                        className="h-8 text-xs border-slate-200 dark:border-white/10">
-                        Huỷ
-                      </Button>
+                        className="h-8 text-xs rounded-lg border-slate-200 dark:border-white/10">Huỷ</Button>
                       <Button size="sm" onClick={handleSaveStatus} disabled={saving}
-                        className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 dark:bg-[#a3e635] dark:text-[#0a0f08] dark:hover:bg-[#84cc16] text-white gap-1.5">
-                        {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                        Lưu thay đổi
+                        className="h-8 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:text-[#0a0e14] text-white gap-1">
+                        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                        Lưu
                       </Button>
                     </>
                   ) : (
                     <Button size="sm" variant="outline" onClick={() => setEditingStatus(true)}
-                      className="h-8 text-xs border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 gap-1.5">
-                      <Edit2 className="w-3.5 h-3.5" /> Sửa phân loại
+                      className="h-8 text-xs rounded-lg border-slate-200 dark:border-white/10 gap-1">
+                      <Edit2 className="w-3 h-3" /> Sửa phân loại
                     </Button>
                   )}
                 </div>
               </div>
 
-              <div className="px-6 py-5 space-y-4 border-b border-slate-100 dark:border-white/8">
+              {/* AI Summary */}
+              <div className="px-5 py-4 space-y-4 border-b border-slate-100 dark:border-white/8">
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-slate-800 dark:text-white flex items-center gap-2 text-left">
-                    <Brain className="w-4 h-4 text-emerald-500" /> AI Nhận xét tổng quan
+                  <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Brain className="w-3.5 h-3.5 text-emerald-500" /> AI Nhận xét
                   </h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-4 border border-emerald-100 dark:border-emerald-500/20 leading-relaxed text-left">
+                  <p className="text-sm text-slate-700 dark:text-slate-300 bg-emerald-50 dark:bg-emerald-500/8 rounded-xl p-4 border border-emerald-100 dark:border-emerald-500/15 leading-relaxed">
                     {sub.ai_summary}
                   </p>
                 </div>
-                <div className="space-y-2 text-left">
-                  <h4 className="text-sm font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-                    <ChevronDown className="w-4 h-4 text-amber-500" /> Lời khuyên cho Chỉ huy
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <ChevronDown className="w-3.5 h-3.5 text-amber-500" /> Lời khuyên
                   </h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 bg-amber-50 dark:bg-amber-500/10 rounded-xl p-4 border border-amber-100 dark:border-amber-500/20 leading-relaxed">
+                  <p className="text-sm text-slate-700 dark:text-slate-300 bg-amber-50 dark:bg-amber-500/8 rounded-xl p-4 border border-amber-100 dark:border-amber-500/15 leading-relaxed">
                     {sub.ai_advice}
                   </p>
                 </div>
               </div>
 
-              <div className="px-6 py-5 border-b border-slate-100 dark:border-white/8 space-y-4">
-                <div className="space-y-2 text-left">
-                  <h4 className="text-sm font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-blue-500" /> Nhận xét của Chỉ huy
-                  </h4>
-                  {editingStatus ? (
-                    <textarea
-                      value={newAdminNote}
-                      onChange={e => setNewAdminNote(e.target.value)}
-                      placeholder="Ghi chú, nhận xét hoặc đánh giá thêm của Chỉ huy..."
-                      className="w-full h-24 p-3 text-sm bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-xl outline-none focus:border-blue-500 dark:focus:border-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 resize-none font-sans"
-                    />
-                  ) : (
-                    <div className="text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-white/2 rounded-xl p-4 border border-slate-200 dark:border-white/5 leading-relaxed min-h-[4rem]">
-                      {sub.admin_note ? (
-                        <p className="whitespace-pre-wrap">{sub.admin_note}</p>
-                      ) : (
-                        <em className="text-slate-400 dark:text-slate-500">Chưa có nhận xét. Nhấn "Sửa phân loại" để thêm.</em>
-                      )}
-                    </div>
-                  )}
-                </div>
+              {/* Commander note */}
+              <div className="px-5 py-4 border-b border-slate-100 dark:border-white/8">
+                <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                  <FileText className="w-3.5 h-3.5 text-blue-500" /> Nhận xét Chỉ huy
+                </h4>
+                {editingStatus ? (
+                  <textarea value={newAdminNote} onChange={e => setNewAdminNote(e.target.value)}
+                    placeholder="Nhận xét của Chỉ huy..."
+                    className="w-full h-20 p-3 text-sm bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 resize-none" />
+                ) : (
+                  <div className="text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-white/[0.03] rounded-xl p-3 border border-slate-100 dark:border-white/8 min-h-[60px]">
+                    {sub.admin_note ? <p className="whitespace-pre-wrap">{sub.admin_note}</p>
+                      : <em className="text-slate-400 dark:text-slate-600">Chưa có nhận xét.</em>}
+                  </div>
+                )}
               </div>
 
-              <div className="px-6 py-5 space-y-3">
-                <h4 className="text-sm font-semibold text-slate-800 dark:text-white flex items-center gap-2 mb-4 text-left">
-                  <MessageSquare className="w-4 h-4 text-blue-500" />
-                  Chi tiết Câu hỏi & Câu trả lời ({sub.responses?.length ?? 0} câu)
+              {/* Q&A */}
+              <div className="px-5 py-4 space-y-3">
+                <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-blue-500" /> Câu trả lời ({sub.responses?.length ?? 0})
                 </h4>
                 {(sub.responses ?? []).map((r, i) => (
-                  <div key={i} className="rounded-xl border border-slate-100 dark:border-white/8 bg-slate-50/60 dark:bg-white/3 overflow-hidden text-left">
-                    <div className="px-4 py-2.5 bg-slate-100/60 dark:bg-white/5 border-b border-slate-100 dark:border-white/8">
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
-                        Câu hỏi {i + 1}
-                      </p>
+                  <div key={i} className="rounded-xl border border-slate-100 dark:border-white/8 overflow-hidden">
+                    <div className="px-4 py-2.5 bg-slate-50 dark:bg-white/[0.04] border-b border-slate-100 dark:border-white/8">
+                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Câu {i + 1}</p>
                       <p className="text-sm text-slate-700 dark:text-slate-200 mt-0.5 leading-snug">{r.question}</p>
                     </div>
                     <div className="px-4 py-3">
-                      <p className="text-xs text-emerald-600 dark:text-[#a3e635] font-semibold uppercase tracking-wider mb-1">Câu trả lời</p>
-                      <p className="text-sm text-slate-800 dark:text-slate-100 leading-relaxed font-sans">{r.answer || <em className="text-slate-400">Không có câu trả lời</em>}</p>
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-1">Trả lời</p>
+                      <p className="text-sm text-slate-800 dark:text-slate-100 leading-relaxed">{r.answer || <em className="text-slate-400">Không có</em>}</p>
                     </div>
                   </div>
                 ))}
@@ -633,27 +582,15 @@ export default function SoldiersPage() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
-        isOpen={isConfirmOpen}
-        onOpenChange={setIsConfirmOpen}
-        onConfirm={handleActualDelete}
-        isLoading={isDeleting}
-        title="Xác nhận xoá chiến sĩ"
-        description={`Đồng chí có chắc chắn muốn xoá ${selectedIds.length} chiến sĩ này khỏi danh sách? Hành động này không thể hoàn tác.`}
-        confirmText="Xoá vĩnh viễn"
-        variant="danger"
-      />
+      <ConfirmDialog isOpen={isConfirmOpen} onOpenChange={setIsConfirmOpen} onConfirm={handleActualDelete}
+        isLoading={isDeleting} title="Xác nhận xoá"
+        description={`Xoá ${selectedIds.length} chiến sĩ? Hành động này không thể hoàn tác.`}
+        confirmText="Xoá" variant="danger" />
 
-      <ExcelUploadDialog
-        isOpen={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
-        onUpload={handleFileUpload}
-        isUploading={uploading}
-        title="Tải lên danh sách quân nhân"
-        description="Kéo thả tập tin Excel chứa hồ sơ quân nhân để thêm hàng loạt vào hệ thống."
-        sampleFileName="mau_chien_si.xlsx"
-        sampleFileUrl="/mau_chien_si.xlsx"
-      />
+      <ExcelUploadDialog isOpen={uploadDialogOpen} onOpenChange={setUploadDialogOpen} onUpload={handleFileUpload}
+        isUploading={uploading} title="Import danh sách"
+        description="Upload file Excel với cột full_name và unit."
+        sampleFileName="mau_chien_si.xlsx" sampleFileUrl="/mau_chien_si.xlsx" />
     </div>
   );
 }

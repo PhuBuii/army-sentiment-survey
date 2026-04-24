@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { Pagination } from "@/components/ui/pagination";
 import { useSearchParams } from "next/navigation";
+import { Label } from "@/components/ui/label";
 
 type Submission = {
   id: string;
@@ -165,24 +166,38 @@ export default function AdminDashboard() {
   };
 
   if (loading) {
-    return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600 dark:text-[#a3e635]" /></div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-7 h-7 animate-spin text-emerald-500" />
+          <p className="text-xs text-slate-400 dark:text-slate-500">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6" id="dashboard-content">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Tổng Quan Báo Cáo</h1>
-          <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">Dữ liệu phân tích tư tưởng quân nhân cập nhật theo thời gian thực.</p>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Tổng Quan Báo Cáo</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Dữ liệu phân tích tư tưởng cập nhật thời gian thực.</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <Button variant="outline" className="bg-white dark:bg-[#111] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/10" onClick={() => exportElementToPDF("dashboard-content", selectedUnit)}>
-            <Printer className="w-4 h-4 mr-2" /> In Báo Cáo
+          <Button
+            variant="outline" size="sm"
+            className="h-9 px-3 text-sm bg-white dark:bg-white/5 text-slate-700 dark:text-slate-300
+                       border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/8"
+            onClick={() => exportElementToPDF("dashboard-content", selectedUnit)}
+          >
+            <Printer className="w-4 h-4 mr-1.5" /> In Báo Cáo
           </Button>
-          <select 
+          <select
             value={selectedUnit}
             onChange={(e) => setSelectedUnit(e.target.value)}
-            className="w-full sm:w-auto bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 outline-none focus:border-emerald-500 dark:focus:border-[#a3e635]"
+            className="h-9 px-3 text-sm bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10
+                       rounded-xl text-slate-700 dark:text-slate-300 outline-none
+                       focus:border-emerald-500 dark:focus:border-emerald-400 appearance-none cursor-pointer"
           >
             <option value="all">Toàn bộ Đơn vị</option>
             {units.map(u => (
@@ -192,50 +207,50 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Overview Cards */}
+      {/* Overview Cards — consistent style with rest of app */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="shadow-sm border-slate-200 dark:border-white/10 dark:bg-[#0a0f08]/50">
-          <CardContent className="p-4 sm:p-6 flex items-center justify-between">
+        <Card className="shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22]">
+          <CardContent className="p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Tổng quân số</p>
-              <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">{stats.total}</h3>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Tổng quân số</p>
+              <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stats.total}</h3>
             </div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center">
-              <Users className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="shadow-sm border-slate-200 dark:border-white/10 dark:bg-[#0a0f08]/50">
-          <CardContent className="p-4 sm:p-6 flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Đã khảo sát</p>
-              <h3 className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-[#a3e635]">{stats.completed}</h3>
-            </div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 dark:bg-[#a3e635]/10 text-emerald-600 dark:text-[#a3e635] rounded-full flex items-center justify-center">
-              <Target className="w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="w-11 h-11 bg-blue-50 dark:bg-blue-500/10 rounded-2xl border border-blue-100 dark:border-blue-500/20 flex items-center justify-center">
+              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-slate-200 dark:border-white/10 dark:bg-[#0a0f08]/50 sm:col-span-2 lg:col-span-1">
-          <CardContent className="p-4 sm:p-6 flex items-center justify-between">
+        <Card className="shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22]">
+          <CardContent className="p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Tư tưởng rủi ro</p>
-              <h3 className="text-2xl sm:text-3xl font-bold text-red-600 dark:text-red-400">{stats.warning}</h3>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Đã khảo sát</p>
+              <h3 className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{stats.completed}</h3>
             </div>
-             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center">
-              <Activity className="w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 flex items-center justify-center">
+              <Target className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22] sm:col-span-2 lg:col-span-1">
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Tư tưởng rủi ro</p>
+              <h3 className="text-3xl font-black text-red-600 dark:text-red-400">{stats.warning}</h3>
+            </div>
+            <div className="w-11 h-11 bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-100 dark:border-red-500/20 flex items-center justify-center">
+              <Activity className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Analytics Chart */}
-        <Card className="lg:col-span-1 shadow-sm border-slate-200 dark:border-white/10 dark:bg-[#0a0f08]/50 flex flex-col">
+        {/* Chart */}
+        <Card className="lg:col-span-1 shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22] flex flex-col">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Tỷ trọng tâm lý</CardTitle>
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tỷ trọng tâm lý</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col items-center justify-center min-h-[300px]">
              {chartData.length > 0 ? (
@@ -268,12 +283,12 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Recent Updates Table */}
-        <Card className="lg:col-span-2 shadow-sm border-slate-200 dark:border-white/10 dark:bg-[#0a0f08]/50 overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-white/5 pb-4">
-            <CardTitle className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">Cập nhật gần đây nhất</CardTitle>
-            <Link href="/admin/soldiers" className="text-xs sm:text-sm text-emerald-600 dark:text-[#a3e635] hover:text-emerald-700 dark:hover:text-[#b8f553] font-medium flex items-center gap-1 transition-colors">
-              Xem tất cả <ArrowRight size={14} />
+        {/* Recent table */}
+        <Card className="lg:col-span-2 shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22] overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-white/8 pb-3.5">
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Cập nhật gần nhất</CardTitle>
+            <Link href="/admin/soldiers" className="text-[13px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium flex items-center gap-1">
+              Xem tất cả <ArrowRight size={13} />
             </Link>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
@@ -305,7 +320,7 @@ export default function AdminDashboard() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                              {sub ? renderBadge(sub.ai_status) : "-"}
-                             {sub?.is_resolved && <ShieldCheck className="w-4 h-4 text-emerald-500" title="Đã can thiệp xử lý" />}
+                             {sub?.is_resolved && <ShieldCheck className="w-4 h-4 text-emerald-500" />}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">

@@ -35,7 +35,7 @@ export default async function SurveyPage({
          <ThemeToggle />
       </div>
       <div className="w-full max-w-3xl z-10">
-        <SurveyForm soldier={data.soldier} questions={data.questions} />
+        <SurveyForm soldier={data.soldier} questions={data.questions} token={token} />
       </div>
     </div>
   );

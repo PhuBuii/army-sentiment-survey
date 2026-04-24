@@ -74,7 +74,8 @@ export async function listAdminUsers() {
       return {
         ...u,
         role: p?.role || "super_admin",
-        assigned_unit: p?.assigned_unit || null
+        assigned_unit: p?.assigned_unit || null,
+        full_name: p?.full_name || null,
       };
     });
 
@@ -128,10 +129,32 @@ export async function deleteAdminUser(userId: string) {
   }
 }
 
+export async function updateAdminProfile(
+  userId: string,
+  fullName: string,
+  role: string,
+  assignedUnit?: string
+) {
+  try {
+    const supabaseAdmin = getAdminClient();
+    const { error } = await supabaseAdmin.from("admin_profiles").upsert({
+      id: userId,
+      full_name: fullName || null,
+      role,
+      assigned_unit: assignedUnit || null,
+    }, { onConflict: "id" });
+    if (error) return { error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
 export async function updateAdminPassword(userId: string, newPassword: string) {
   try {
     const supabaseAdmin = getAdminClient();
     const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+
       password: newPassword,
     });
     if (error) return { error: error.message };

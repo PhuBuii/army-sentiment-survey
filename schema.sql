@@ -47,10 +47,14 @@ ALTER TABLE public.submissions ADD COLUMN IF NOT EXISTS is_resolved BOOLEAN DEFA
 -- 5.5 Table: Admin Profiles (RBAC)
 CREATE TABLE IF NOT EXISTS public.admin_profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT, -- Display name for the admin officer
     role TEXT NOT NULL CHECK (role IN ('super_admin', 'unit_admin')) DEFAULT 'super_admin',
     assigned_unit TEXT, -- e.g., 'Đại đội 1'. Null if super_admin
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure columns exist if table was created before this migration
+ALTER TABLE public.admin_profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
 
 
 -- 6. Performance Indexes

@@ -2,144 +2,261 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/login/actions";
-import { LayoutDashboard, UsersRound, HelpCircle, LogOut, ShieldAlert, ChevronRight, UserCog, Loader2 } from "lucide-react";
+import {
+  LayoutDashboard, UsersRound, HelpCircle,
+  LogOut, ChevronRight, UserCog, Loader2
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+
+// Each item has its own accent color — per user preference
+const navItems = [
+  {
+    name: "Tổng quan",
+    href: "/admin/dashboard",
+    icon: LayoutDashboard,
+    color: "emerald",
+    // Tailwind classes per color
+    activeText:   "text-emerald-600 dark:text-emerald-400",
+    activeBg:     "bg-emerald-500/10 dark:bg-emerald-400/10",
+    activeBorder: "border-emerald-500/20 dark:border-emerald-400/20",
+    activeBar:    "bg-emerald-500 dark:bg-emerald-400",
+    sidebarActive:"bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
+    sidebarIcon:  "text-emerald-400",
+    sidebarDot:   "bg-emerald-400",
+  },
+  {
+    name: "Chiến sĩ",
+    href: "/admin/soldiers",
+    icon: UsersRound,
+    color: "blue",
+    activeText:   "text-blue-600 dark:text-blue-400",
+    activeBg:     "bg-blue-500/10 dark:bg-blue-400/10",
+    activeBorder: "border-blue-500/20 dark:border-blue-400/20",
+    activeBar:    "bg-blue-500 dark:bg-blue-400",
+    sidebarActive:"bg-blue-500/15 text-blue-300 border-blue-500/25",
+    sidebarIcon:  "text-blue-400",
+    sidebarDot:   "bg-blue-400",
+  },
+  {
+    name: "Câu hỏi",
+    href: "/admin/questions",
+    icon: HelpCircle,
+    color: "amber",
+    activeText:   "text-amber-600 dark:text-amber-400",
+    activeBg:     "bg-amber-500/10 dark:bg-amber-400/10",
+    activeBorder: "border-amber-500/20 dark:border-amber-400/20",
+    activeBar:    "bg-amber-500 dark:bg-amber-400",
+    sidebarActive:"bg-amber-500/15 text-amber-300 border-amber-500/25",
+    sidebarIcon:  "text-amber-400",
+    sidebarDot:   "bg-amber-400",
+  },
+  {
+    name: "Tài khoản",
+    href: "/admin/accounts",
+    icon: UserCog,
+    color: "purple",
+    activeText:   "text-purple-600 dark:text-purple-400",
+    activeBg:     "bg-purple-500/10 dark:bg-purple-400/10",
+    activeBorder: "border-purple-500/20 dark:border-purple-400/20",
+    activeBar:    "bg-purple-500 dark:bg-purple-400",
+    sidebarActive:"bg-purple-500/15 text-purple-300 border-purple-500/25",
+    sidebarIcon:  "text-purple-400",
+    sidebarDot:   "bg-purple-400",
+  },
+];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  const getPageName = () => {
-    if (pathname.includes("dashboard")) return "Tổng quan";
-    if (pathname.includes("soldiers")) return "Chiến sĩ";
-    if (pathname.includes("questions")) return "Câu hỏi";
-    if (pathname.includes("accounts")) return "Tài khoản";
-    return "Hệ thống phân tích";
-  };
+  const getCurrent = () =>
+    navItems.find(i => pathname.includes(i.href.split("/").pop()!));
 
-  const navItems = [
-    { name: "Tổng quan", href: "/admin/dashboard", icon: LayoutDashboard, color: "text-emerald-400", activeClass: "bg-slate-800 dark:bg-white/10 text-emerald-400", mobileColor: "text-emerald-600 dark:text-emerald-400" },
-    { name: "Chiến sĩ", href: "/admin/soldiers", icon: UsersRound, color: "text-blue-400", activeClass: "bg-slate-800 dark:bg-white/10 text-blue-400", mobileColor: "text-blue-600 dark:text-blue-400" },
-    { name: "Câu hỏi", href: "/admin/questions", icon: HelpCircle, color: "text-amber-400", activeClass: "bg-slate-800 dark:bg-white/10 text-amber-400", mobileColor: "text-amber-600 dark:text-amber-400" },
-    { name: "Tài khoản", href: "/admin/accounts", icon: UserCog, color: "text-purple-400", activeClass: "bg-slate-800 dark:bg-white/10 text-purple-400", mobileColor: "text-purple-600 dark:text-purple-400" },
-  ];
+  const getPageName = () => getCurrent()?.name ?? "Hệ thống";
+
+  const isActive = (href: string) =>
+    pathname.includes(href.split("/").pop()!);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-background flex flex-col md:flex-row transition-colors duration-300 overflow-hidden">
-      
-      {/* ── Mobile Topbar ── */}
-      <div className="md:hidden flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/10 p-4 sticky top-0 z-30 shadow-sm">
-        <div className="flex items-center gap-2">
-           <div className="p-1.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg">
-             <ShieldAlert size={20} />
-           </div>
-           <h2 className="font-bold text-slate-900 dark:text-slate-100">{getPageName()}</h2>
+    <div className="min-h-screen bg-slate-100 dark:bg-[#0d1117] flex flex-col md:flex-row transition-colors duration-300">
+
+      {/* ══ MOBILE TOPBAR ══════════════════════════════════════════════════════ */}
+      <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3
+                      bg-white/95 dark:bg-[#161b22]/98 border-b border-slate-200/60 dark:border-white/8
+                      backdrop-blur-xl shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <Image src="/logo.png" alt="Logo" width={34} height={34} className="rounded-xl" />
+          <div>
+            <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-0.5">
+              Ban Chỉ Huy
+            </p>
+            <h2 className="font-bold text-slate-900 dark:text-white text-[15px] leading-tight">
+              {getPageName()}
+            </h2>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-           <ThemeToggle />
-           <form action={logout}>
-             <Button type="submit" variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30">
-               <LogOut size={20} />
-             </Button>
-           </form>
+        <div className="flex items-center">
+          <ThemeToggle />
+          <form action={logout}>
+            <Button
+              type="submit" variant="ghost" size="icon"
+              className="w-9 h-9 ml-0.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl"
+            >
+              <LogOut size={17} />
+            </Button>
+          </form>
         </div>
       </div>
 
-      {/* ── Desktop Sidebar ── */}
-      <aside className={`
-        hidden md:flex flex-col inset-y-0 left-0 z-50 w-64 bg-slate-900 dark:bg-[#0a0f08] border-r border-slate-800 dark:border-white/5 text-slate-300 shadow-2xl
-      `}>
-        <div className="p-6 border-b border-slate-800 dark:border-white/5 flex items-center gap-3 bg-slate-950 dark:bg-[#060905]">
-          <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
-            <ShieldAlert size={24} />
-          </div>
+      {/* ══ DESKTOP SIDEBAR ════════════════════════════════════════════════════ */}
+      <aside className="hidden md:flex flex-col w-[220px] shrink-0
+                        bg-[#0f1419] dark:bg-[#0d1117] border-r border-white/[0.06] text-slate-300">
+        {/* Brand */}
+        <div className="px-5 py-[18px] border-b border-white/[0.06] flex items-center gap-3">
+          <Image
+            src="/logo.png" alt="Logo"
+            width={38} height={38}
+            className="rounded-xl border border-white/10 shadow-md"
+          />
           <div>
-             <h2 className="font-bold text-slate-100 tracking-tight leading-tight">Ban Chỉ Huy</h2>
-             <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Army Sentiment AI</p>
+            <h2 className="text-[13px] font-bold text-white leading-tight tracking-tight">Ban Chỉ Huy</h2>
+            <p className="text-[9px] text-slate-500 uppercase tracking-[0.12em] font-semibold mt-0.5">Army Survey</p>
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 mt-2 px-3">Quản trị & Phân tích</div>
-          
+        {/* Nav */}
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto mt-1">
+          <p className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.15em] mb-2 mt-1 px-3">
+            Điều hướng
+          </p>
           {navItems.map((item) => {
-            const isActive = pathname.includes(item.href.split('/').pop()!);
+            const active = isActive(item.href);
             return (
-              <Link key={item.name} href={item.href} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${isActive ? item.activeClass : 'hover:bg-slate-800 dark:hover:bg-white/5 hover:text-white'}`}>
-                <item.icon size={18} className={isActive ? item.color : `text-slate-400 group-hover:${item.color.split(' ')[0]}`} />
-                {item.name}
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`group flex items-center gap-2.5 px-3 py-[9px] rounded-xl text-[13px] font-medium
+                            transition-all duration-150 border
+                            ${active
+                              ? `${item.sidebarActive} shadow-sm`
+                              : "text-slate-400 hover:bg-white/[.05] hover:text-slate-200 border-transparent"
+                            }`}
+              >
+                <item.icon
+                  size={16}
+                  className={`shrink-0 ${active ? item.sidebarIcon : "text-slate-500 group-hover:text-slate-300"}`}
+                  strokeWidth={active ? 2.5 : 2}
+                />
+                <span className="flex-1">{item.name}</span>
+                {active && <span className={`w-1.5 h-1.5 rounded-full ${item.sidebarDot}`} />}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-800 dark:border-white/5 bg-slate-950/50 dark:bg-[#060905]">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-8 h-8 rounded-full bg-slate-800 dark:bg-white/10 flex items-center justify-center border border-slate-700 dark:border-white/5">
-              <span className="text-xs font-bold text-slate-300">AD</span>
+        {/* User */}
+        <div className="px-3 pb-4 pt-3 border-t border-white/[0.06]">
+          <div className="flex items-center gap-2.5 px-2 mb-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/25
+                            flex items-center justify-center shrink-0">
+              <span className="text-[11px] font-extrabold text-emerald-400">AD</span>
             </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium text-slate-200 truncate">Administrator</p>
-              <p className="text-[10px] text-emerald-500 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Trực tuyến</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-slate-200 truncate">Administrator</p>
+              <p className="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                Đang hoạt động
+              </p>
             </div>
           </div>
           <form action={logout}>
-            <Button type="submit" variant="ghost" className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30 gap-2">
-              <LogOut size={16} />
+            <Button
+              type="submit" variant="ghost"
+              className="w-full justify-start text-slate-500 hover:text-red-400 hover:bg-red-500/10
+                         gap-2 h-9 text-[13px] rounded-xl"
+            >
+              <LogOut size={14} />
               Đăng xuất
             </Button>
           </form>
         </div>
       </aside>
 
-      {/* ── Main Content Area ── */}
-      <main className="flex-1 flex flex-col h-[calc(100vh-130px)] md:h-screen md:min-h-screen overflow-hidden">
-        {/* Top Header (Desktop Only) */}
-        <header className="h-14 bg-white dark:bg-background border-b border-slate-200 dark:border-border hidden md:flex items-center justify-between px-6 shadow-sm z-10 sticky top-0 transition-colors duration-300">
-           <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
-             <span className="text-slate-400 dark:text-slate-500">Ban Chỉ Huy</span>
-             <ChevronRight size={14} className="mx-2 text-slate-300 dark:text-slate-600" />
-             <span className="text-slate-800 dark:text-slate-200 font-medium tracking-tight">
-               {getPageName()}
-             </span>
-           </div>
-           <div>
-             <ThemeToggle />
-           </div>
+      {/* ══ MAIN CONTENT ═══════════════════════════════════════════════════════ */}
+      <main className="flex-1 flex flex-col md:h-screen overflow-hidden">
+        {/* Breadcrumb header */}
+        <header className="hidden md:flex items-center justify-between h-14 px-6
+                            bg-white dark:bg-[#161b22] border-b border-slate-200/70 dark:border-white/8
+                            sticky top-0 z-10 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center gap-2 text-[13px]">
+            <span className="text-slate-400 dark:text-slate-500 font-medium">Ban Chỉ Huy</span>
+            <ChevronRight size={13} className="text-slate-300 dark:text-slate-700" />
+            <span className="text-slate-800 dark:text-slate-200 font-semibold">{getPageName()}</span>
+          </div>
+          <ThemeToggle />
         </header>
-        
-        {/* pb-20 on mobile to ensure content isn't hidden by bottom nav */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8">
-          <React.Suspense fallback={<div className="flex h-full items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600 dark:text-[#a3e635]" /></div>}>
+
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6
+                        bg-slate-100 dark:bg-[#0d1117]">
+          <React.Suspense
+            fallback={
+              <div className="flex h-64 items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-7 h-7 animate-spin text-emerald-500" />
+                  <p className="text-xs text-slate-400">Đang tải dữ liệu...</p>
+                </div>
+              </div>
+            }
+          >
             {children}
           </React.Suspense>
         </div>
       </main>
 
-      {/* ── Mobile Bottom Navbar ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-white/10 px-2 py-2 flex items-center justify-around shadow-[0_-4px_10px_rgba(0,0,0,0.05)] pb-safe">
-        {navItems.map((item) => {
-           const isActive = pathname.includes(item.href.split('/').pop()!);
-           return (
-             <Link 
-               key={item.href} 
-               href={item.href} 
-               className={`flex flex-col items-center justify-center p-2 rounded-xl min-w-[70px] transition-all duration-200 ${isActive ? 'bg-slate-50 dark:bg-white/5 scale-105' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5'}`}
-             >
-               <item.icon size={22} className={isActive ? item.mobileColor : "text-slate-400 dark:text-slate-500"} strokeWidth={isActive ? 2.5 : 2} />
-               <span className={`text-[10px] mt-1 font-medium ${isActive ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>
-                 {item.name}
-               </span>
-               {isActive && (
-                 <span className={`absolute -top-2 w-1.5 h-1.5 rounded-full ${item.mobileColor.split(' ')[0].replace('text-', 'bg-')} dark:${item.mobileColor.split(' ')[1].replace('text-', 'bg-')}`}></span>
-               )}
-             </Link>
-           );
-        })}
+      {/* ══ MOBILE BOTTOM NAVBAR ════════════════════════════════════════════════
+          • grid-cols-4: equal width tabs guaranteed
+          • Each item uses its own accent color (emerald/blue/amber/purple)
+          • Same display pattern: top-bar line + pill bg + icon + label
+      ══════════════════════════════════════════════════════════════════════════*/} 
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/80 dark:bg-[#161b22]/80 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/5 shadow-[0_-1px_10px_rgba(0,0,0,0.05)]"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="grid grid-cols-4 h-16 max-w-lg mx-auto">
+          {navItems.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="relative flex flex-col items-center justify-center select-none active:scale-95 transition-transform"
+              >
+                <div className={`
+                  flex flex-col items-center justify-center px-4 py-1.5 rounded-2xl transition-all duration-300
+                  ${active ? `${item.activeBg} ${item.activeText}` : "text-slate-400 dark:text-slate-500"}
+                `}>
+                  <item.icon
+                    size={20}
+                    strokeWidth={active ? 2.5 : 2}
+                    className="mb-0.5"
+                  />
+                  <span className="text-[10px] font-bold tracking-tight">
+                    {item.name}
+                  </span>
+                </div>
+                {/* Active indicator dot */}
+                {active && (
+                  <span className={`absolute bottom-1 w-1 h-1 rounded-full ${item.activeBar}`} />
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
-      
+
     </div>
   );
 }

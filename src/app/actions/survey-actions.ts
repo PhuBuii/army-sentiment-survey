@@ -30,10 +30,6 @@ export async function validateTokenAndGetQuestions(token: string) {
       return { error: "Không tìm thấy chiến sĩ hoặc link khảo sát không hợp lệ." };
     }
 
-    if (soldier.is_completed) {
-      return { error: "Khảo sát này đã được hoàn thành trước đó." };
-    }
-
     const { data: questions, error: qError } = await anonSupabase
       .from("questions")
       .select("id, content");
@@ -42,13 +38,21 @@ export async function validateTokenAndGetQuestions(token: string) {
       return { error: "Chưa có danh sách câu hỏi trong hệ thống." };
     }
 
+    let finalQuestions = [];
+    
+    if (soldier.is_completed) {
+      return { error: "Đồng chí đã hoàn thành khảo sát này. Mỗi tài khoản chỉ được thực hiện một lần." };
+    }
+    
     // Chọn ngẫu nhiên 5 câu hỏi
     const shuffled = [...questions].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 5);
+    finalQuestions = shuffled.slice(0, 5);
 
     return {
       soldier: { id: soldier.id, full_name: soldier.full_name, unit: soldier.unit },
-      questions: selected,
+      questions: finalQuestions,
+      isCompleted: soldier.is_completed,
+      previousAnswers: {}
     };
   } catch (err: any) {
     return { error: err.message || "Lỗi server." };
@@ -67,7 +71,8 @@ export async function submitSurveyAndAnalyze(
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const modelsToTry = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-3.1-flash-lite-preview"];
+    // Ưu tiên bản 2.5-flash vì đã có Cache, sau đó mới thử các bản preview/lite nếu bị quá tải
+    const modelsToTry = ["gemini-2.5-flash", "gemini-3.1-flash-lite-preview"];
     let aiData = null;
     let lastError = null;
 
@@ -79,10 +84,16 @@ export async function submitSurveyAndAnalyze(
         try {
           console.log(`Trying model: ${modelName} (Attempt ${retries + 1})`);
           let model;
-          if (process.env.GEMINI_CACHE_NAME) {
+          const cacheName = process.env.GEMINI_CACHE_NAME;
+          
+          // CRITICAL: Context Caching only works if the model name matches exactly what was used to create the cache
+          // Usually, the cache is created with a specific stable model like gemini-1.5-flash or gemini-2.5-flash.
+          const isCacheCompatible = cacheName && (modelName === "gemini-2.5-flash" || modelName === "models/gemini-2.5-flash");
+
+          if (isCacheCompatible) {
             model = genAI.getGenerativeModel({ 
               model: modelName,
-              cachedContent: { name: process.env.GEMINI_CACHE_NAME } as any
+              cachedContent: { name: cacheName } as any
             });
           } else {
             model = genAI.getGenerativeModel({ model: modelName });

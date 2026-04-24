@@ -12,12 +12,12 @@ import {
   Table, TableHeader, TableRow, TableHead, TableBody, TableCell,
 } from "@/components/ui/table";
 import {
-  listAdminUsers, createAdminUser, deleteAdminUser, updateAdminPassword,
+  listAdminUsers, createAdminUser, deleteAdminUser, updateAdminPassword, updateAdminProfile,
 } from "@/app/actions/admin-actions";
 import { Pagination } from "@/components/ui/pagination";
 import { useSearchParams } from "next/navigation";
 import {
-  UserCog, UserPlus, Trash2, KeyRound, Loader2, ShieldCheck, AlertTriangle, Wand2, Mail
+  UserCog, UserPlus, Trash2, KeyRound, Loader2, ShieldCheck, AlertTriangle, Wand2, Mail, Edit2
 } from "lucide-react";
 
 type AdminUser = {
@@ -27,6 +27,7 @@ type AdminUser = {
   last_sign_in_at?: string | null;
   role?: string;
   assigned_unit?: string | null;
+  full_name?: string | null;
 };
 
 export default function AccountsPage() {
@@ -59,6 +60,15 @@ export default function AccountsPage() {
   const [delTarget, setDelTarget] = useState<AdminUser | null>(null);
   const [deleting, setDeleting]   = useState(false);
   const [delError, setDelError]   = useState("");
+
+  // Edit profile dialog
+  const [editOpen, setEditOpen]         = useState(false);
+  const [editTarget, setEditTarget]     = useState<AdminUser | null>(null);
+  const [editFullName, setEditFullName] = useState("");
+  const [editRole, setEditRole]         = useState("super_admin");
+  const [editUnit, setEditUnit]         = useState("");
+  const [editSaving, setEditSaving]     = useState(false);
+  const [editError, setEditError]       = useState("");
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -142,6 +152,29 @@ export default function AccountsPage() {
     fetchUsers();
   };
 
+  // ── Edit Profile ─────────────────────────────────────────────────────────
+  const openEditProfile = (user: AdminUser) => {
+    setEditTarget(user);
+    setEditFullName(user.full_name || "");
+    setEditRole(user.role || "super_admin");
+    setEditUnit(user.assigned_unit || "");
+    setEditError("");
+    setEditOpen(true);
+  };
+
+  const handleEditProfile = async () => {
+    if (editRole === "unit_admin" && !editUnit) {
+      setEditError("Vui lòng điền Đơn vị uỷ quyền."); return;
+    }
+    setEditSaving(true); setEditError("");
+    const res = await updateAdminProfile(editTarget!.id, editFullName, editRole, editUnit);
+    setEditSaving(false);
+    if (res.error) { setEditError(res.error); return; }
+    setEditOpen(false);
+    fetchUsers();
+  };
+
+
   const searchParams = useSearchParams();
   const currentPage = parseInt(searchParams.get("page") || "1", 10);
   const ITEMS_PER_PAGE = 10;
@@ -149,22 +182,22 @@ export default function AccountsPage() {
   const paginatedUsers = users.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-5">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <UserCog className="text-purple-500" /> Quản lý Tài khoản Admin
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <UserCog size={20} className="text-purple-500" /> Tài khoản Admin
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Tạo, đổi mật khẩu và xoá tài khoản cấp quản trị viên.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Quản lý tài khoản, phân quyền và bảo mật truy cập hệ thống.
           </p>
         </div>
-        <Button
+        <Button size="sm"
           onClick={() => { setCreateOpen(true); setCreateError(""); setNewEmail(""); setNewPassword(""); setNewRole("super_admin"); setNewUnit(""); }}
-          className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 shadow-md"
+          className="h-9 rounded-xl bg-purple-600 hover:bg-purple-700 text-white gap-1.5 shadow-sm"
         >
-          <UserPlus className="w-4 h-4" /> Tạo tài khoản mới
+          <UserPlus className="w-3.5 h-3.5" /> Tạo tài khoản
         </Button>
       </div>
 
@@ -178,92 +211,85 @@ export default function AccountsPage() {
       )}
 
       {/* Table */}
-      <Card className="shadow-sm border-slate-200 dark:border-white/10 dark:bg-[#0a0f08]/50 overflow-hidden">
-        <CardHeader className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 py-4">
-          <CardTitle className="text-sm sm:text-base text-slate-900 dark:text-white">
-            Danh sách tài khoản ({users.length})
+      <Card className="shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22] overflow-hidden">
+        <CardHeader className="bg-slate-50/80 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/8 py-3 px-4">
+          <CardTitle className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+            {users.length} tài khoản
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table className="min-w-[560px]">
+            <Table className="min-w-[640px]">
               <TableHeader>
-                <TableRow className="bg-slate-50/50 dark:bg-white/5 border-slate-100 dark:border-white/5">
-                  <TableHead className="w-12 text-center py-3">STT</TableHead>
-                  <TableHead className="py-3">Email</TableHead>
-                  <TableHead>Quyền hạn</TableHead>
-                  <TableHead>Ngày tạo</TableHead>
-                  <TableHead>Đăng nhập lần cuối</TableHead>
-                  <TableHead className="text-right">Thao tác</TableHead>
+                <TableRow className="bg-slate-50/50 dark:bg-white/[0.02] border-slate-100 dark:border-white/8 hover:bg-transparent dark:hover:bg-transparent">
+                  <TableHead className="w-10 text-center py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">#</TableHead>
+                  <TableHead className="py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Họ tên</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Quyền</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ngày tạo</TableHead>
+                  <TableHead className="text-right text-xs font-semibold text-slate-400 uppercase tracking-wider"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-48 text-center">
-                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-purple-500" />
+                    <TableCell colSpan={6} className="h-40 text-center">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-purple-500" />
                     </TableCell>
                   </TableRow>
                 ) : paginatedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-48 text-center text-slate-400 dark:text-slate-500 text-sm">
-                      Không có tài khoản nào.
+                    <TableCell colSpan={6} className="h-40 text-center text-sm text-slate-400 dark:text-slate-500">
+                      Chưa có tài khoản nào.
                     </TableCell>
                   </TableRow>
                 ) : paginatedUsers.map((u, idx) => (
-                  <TableRow key={u.id} className="hover:bg-slate-50 dark:hover:bg-white/5 border-slate-100 dark:border-white/5">
-                    <TableCell className="text-center font-medium text-slate-500 text-xs">
+                  <TableRow key={u.id} className="hover:bg-slate-50/80 dark:hover:bg-white/[0.03] border-slate-100 dark:border-white/8">
+                    <TableCell className="text-center font-mono text-xs text-slate-400 py-3">
                        {(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}
                     </TableCell>
-                    <TableCell className="font-medium text-slate-900 dark:text-slate-200 text-sm">
+                    <TableCell className="py-3">
                       <div className="flex items-center gap-2">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${u.role === 'unit_admin' ? 'bg-sky-50 dark:bg-sky-500/15 border-sky-100 dark:border-sky-500/30' : 'bg-purple-50 dark:bg-purple-500/15 border-purple-100 dark:border-purple-500/30'}`}>
+                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border ${u.role === 'unit_admin' ? 'bg-sky-50 dark:bg-sky-500/10 border-sky-100 dark:border-sky-500/20' : 'bg-purple-50 dark:bg-purple-500/10 border-purple-100 dark:border-purple-500/20'}`}>
                           <ShieldCheck className={`w-3.5 h-3.5 ${u.role === 'unit_admin' ? 'text-sky-600 dark:text-sky-400' : 'text-purple-600 dark:text-purple-400'}`} />
                         </div>
-                        {u.email ?? "—"}
+                        <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{u.email ?? "—"}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-sm text-slate-600 dark:text-slate-300 py-3">
+                      {u.full_name || <span className="text-slate-300 dark:text-slate-600 italic">—</span>}
+                    </TableCell>
+                    <TableCell className="py-3">
                       {u.role === "super_admin" ? (
-                         <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400 px-2 py-1 rounded-md font-semibold">Super Admin</span>
+                         <span className="text-[11px] bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400 px-2 py-0.5 rounded-md font-bold">Super Admin</span>
                       ) : (
-                         <div className="flex flex-col gap-1">
-                           <span className="text-xs bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-400 px-2 py-1 rounded-md font-semibold w-fit">Unit Admin</span>
-                           <span className="text-[10px] text-slate-500">{u.assigned_unit}</span>
+                         <div className="flex flex-col gap-0.5">
+                           <span className="text-[11px] bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-400 px-2 py-0.5 rounded-md font-bold w-fit">Unit Admin</span>
+                           {u.assigned_unit && <span className="text-[10px] text-slate-400 pl-0.5">{u.assigned_unit}</span>}
                          </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-slate-500 dark:text-slate-400 text-xs">
-                      {new Date(u.created_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    <TableCell className="text-xs text-slate-400 dark:text-slate-500 py-3 whitespace-nowrap">
+                      {new Date(u.created_at).toLocaleDateString("vi-VN")}
                     </TableCell>
-                    <TableCell className="text-slate-500 dark:text-slate-400 text-xs">
-                      {u.last_sign_in_at
-                        ? new Date(u.last_sign_in_at).toLocaleString("vi-VN")
-                        : <span className="italic text-slate-300 dark:text-slate-600">Chưa đăng nhập</span>}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline" size="sm"
-                          className="h-8 text-xs border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 dark:hover:bg-white/5 gap-1.5"
-                          onClick={() => { 
-                            setPwTarget(u); 
-                            setPwMode("manual");
-                            setPwValue(""); 
-                            setPwConfirm("");
-                            setPwError(""); 
-                            setPwSuccess(""); 
-                            setPwOpen(true); 
-                          }}
-                        >
-                          <KeyRound className="w-3.5 h-3.5" /> Mật khẩu
+                    <TableCell className="text-right py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon"
+                          className="h-8 w-8 text-slate-400 hover:text-blue-500 rounded-lg"
+                          onClick={() => openEditProfile(u)} title="Sửa hồ sơ">
+                          <Edit2 className="w-3.5 h-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost" size="sm"
-                          className="h-8 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 gap-1.5"
+                        <Button variant="ghost" size="icon"
+                          className="h-8 w-8 text-slate-400 hover:text-amber-500 rounded-lg"
+                          onClick={() => { setPwTarget(u); setPwMode("manual"); setPwValue(""); setPwConfirm(""); setPwError(""); setPwSuccess(""); setPwOpen(true); }}
+                          title="Đổi mật khẩu">
+                          <KeyRound className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon"
+                          className="h-8 w-8 text-slate-400 hover:text-red-500 rounded-lg"
                           onClick={() => { setDelTarget(u); setDelError(""); setDelOpen(true); }}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Xoá
+                          title="Xoá tài khoản">
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     </TableCell>
@@ -281,70 +307,45 @@ export default function AccountsPage() {
 
       {/* ── Create Dialog ── */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md w-[94vw] rounded-2xl dark:bg-[#0d1109] dark:border-white/10">
+        <DialogContent className="max-w-md w-[94vw] rounded-2xl bg-white dark:bg-[#161b22] dark:border-white/10">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-purple-500" /> Tạo tài khoản Admin mới
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-purple-500" /> Tạo tài khoản mới
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-400">
-              Tài khoản sẽ được xác thực ngay (không cần email verify).
-            </DialogDescription>
+            <DialogDescription className="text-xs text-slate-400">Xác thực ngay, không cần email verify.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
+          <div className="space-y-3 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-sm text-slate-700 dark:text-slate-300">Email</Label>
-              <Input
-                type="email" placeholder="admin2@army.local" value={newEmail}
-                onChange={e => setNewEmail(e.target.value)}
-                className="dark:bg-[#111] dark:border-white/15 dark:text-white"
-              />
+              <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email</Label>
+              <Input type="email" placeholder="admin@army.local" value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm text-slate-700 dark:text-slate-300">Mật khẩu (tối thiểu 6 ký tự)</Label>
-              <Input
-                type="password" placeholder="••••••••" value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                className="dark:bg-[#111] dark:border-white/15 dark:text-white"
-              />
+              <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Mật khẩu (≥ 6 ký tự)</Label>
+              <Input type="password" placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm text-slate-700 dark:text-slate-300">Phân quyền</Label>
-              <select
-                value={newRole}
-                onChange={e => setNewRole(e.target.value)}
-                className="w-full bg-white dark:bg-[#111] border border-slate-200 dark:border-white/15 rounded-md px-3 py-2 text-sm text-slate-800 dark:text-slate-200 outline-none focus:border-purple-500"
-              >
-                <option value="super_admin">Ban Quản trị (Super Admin) - Toàn quyền Sư đoàn</option>
-                <option value="unit_admin">Quản lý Đơn vị (Unit Admin) - Giới hạn dữ liệu Đại đội</option>
+              <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phân quyền</Label>
+              <select value={newRole} onChange={e => setNewRole(e.target.value)}
+                className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-slate-200 outline-none focus:border-purple-500">
+                <option value="super_admin">Super Admin — Toàn quyền</option>
+                <option value="unit_admin">Unit Admin — Giới hạn đơn vị</option>
               </select>
             </div>
-            
             {newRole === "unit_admin" && (
-              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
-                <Label className="text-sm text-slate-700 dark:text-slate-300">Nhập chính xác cấp Đơn vị uỷ quyền</Label>
-                <Input
-                  type="text" placeholder="Ví dụ: Đại đội 1" value={newUnit}
-                  onChange={e => setNewUnit(e.target.value)}
-                  className="dark:bg-[#111] dark:border-white/15 dark:text-white"
-                />
-                <p className="text-[10px] text-slate-500">Tên đơn vị phải khớp với tên trong danh sách chiến sĩ tải lên.</p>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Đơn vị uỷ quyền</Label>
+                <Input type="text" placeholder="Đại đội 1" value={newUnit} onChange={e => setNewUnit(e.target.value)}
+                  className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
+                <p className="text-[10px] text-slate-400">Phải khớp chính xác tên đơn vị trong danh sách chiến sĩ.</p>
               </div>
             )}
-            {createError && (
-              <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg px-3 py-2 border border-red-100 dark:border-red-900/50">
-                {createError}
-              </p>
-            )}
-            <div className="flex gap-3 pt-1">
-              <Button variant="outline" className="flex-1 dark:border-white/10 dark:text-slate-300" onClick={() => setCreateOpen(false)}>
-                Huỷ
-              </Button>
-              <Button
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white gap-2"
-                onClick={handleCreate} disabled={creating}
-              >
-                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                Tạo tài khoản
+            {createError && <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10 rounded-xl px-3 py-2 border border-red-100 dark:border-red-500/20">{createError}</p>}
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1 h-10 rounded-xl dark:border-white/10" onClick={() => setCreateOpen(false)}>Huỷ</Button>
+              <Button className="flex-1 h-10 rounded-xl bg-purple-600 hover:bg-purple-700 text-white gap-1.5" onClick={handleCreate} disabled={creating}>
+                {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />} Tạo
               </Button>
             </div>
           </div>
@@ -353,14 +354,12 @@ export default function AccountsPage() {
 
       {/* ── Change Password Dialog (Dual Mode) ── */}
       <Dialog open={pwOpen} onOpenChange={setPwOpen}>
-        <DialogContent className="max-w-md w-[94vw] rounded-2xl dark:bg-[#0d1109] dark:border-white/10">
+        <DialogContent className="max-w-md w-[94vw] rounded-2xl bg-white dark:bg-[#161b22] dark:border-white/10">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-amber-500" /> Cấp lại & Đổi mật khẩu
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-amber-500" /> Đổi mật khẩu
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Đang chỉnh sửa: <span className="font-semibold text-slate-900 dark:text-slate-300">{pwTarget?.email}</span>
-            </DialogDescription>
+            <DialogDescription className="text-xs text-slate-400">{pwTarget?.email}</DialogDescription>
           </DialogHeader>
 
           <div className="pt-2">
@@ -385,22 +384,16 @@ export default function AccountsPage() {
             <div className="space-y-4">
               {/* MANUAL MODE */}
               {pwMode === "manual" && (
-                <div className="space-y-4 animate-fade-in-up">
+                <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label className="text-sm text-slate-700 dark:text-slate-300">Mật khẩu mới</Label>
-                    <Input
-                      type="password" placeholder="••••••••" value={pwValue}
-                      onChange={e => setPwValue(e.target.value)}
-                      className="dark:bg-[#111] dark:border-white/15 dark:text-white"
-                    />
+                    <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Mật khẩu mới</Label>
+                    <Input type="password" placeholder="••••••••" value={pwValue} onChange={e => setPwValue(e.target.value)}
+                      className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm text-slate-700 dark:text-slate-300">Xác nhận mật khẩu</Label>
-                    <Input
-                      type="password" placeholder="••••••••" value={pwConfirm}
-                      onChange={e => setPwConfirm(e.target.value)}
-                      className="dark:bg-[#111] dark:border-white/15 dark:text-white"
-                    />
+                    <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Xác nhận</Label>
+                    <Input type="password" placeholder="••••••••" value={pwConfirm} onChange={e => setPwConfirm(e.target.value)}
+                      className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
                   </div>
                 </div>
               )}
@@ -437,17 +430,12 @@ export default function AccountsPage() {
                 </p>
               )}
 
-              <div className="flex gap-3 pt-2">
-                <Button variant="outline" className="flex-1 dark:border-white/10 dark:text-slate-300" onClick={() => setPwOpen(false)}>
-                  Huỷ bỏ
-                </Button>
-                <Button 
-                  className={`flex-1 text-white gap-2 border-0 ${pwMode === 'random' ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'}`} 
-                  onClick={handleUpdatePw} disabled={pwSaving}
-                >
-                  {pwSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 
-                   pwMode === 'random' ? <Mail className="w-4 h-4" /> : <KeyRound className="w-4 h-4" />}
-                  {pwMode === 'random' ? 'Lưu & Gửi Email' : 'Lưu mật khẩu'}
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1 h-10 rounded-xl dark:border-white/10" onClick={() => setPwOpen(false)}>Huỷ</Button>
+                <Button className={`flex-1 h-10 rounded-xl text-white gap-1.5 border-0 ${pwMode === 'random' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                  onClick={handleUpdatePw} disabled={pwSaving}>
+                  {pwSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : pwMode === 'random' ? <Mail className="w-3.5 h-3.5" /> : <KeyRound className="w-3.5 h-3.5" />}
+                  {pwMode === 'random' ? 'Lưu & Gửi Email' : 'Lưu'}
                 </Button>
               </div>
             </div>
@@ -457,24 +445,63 @@ export default function AccountsPage() {
 
       {/* ── Delete Confirm Dialog ── */}
       <Dialog open={delOpen} onOpenChange={setDelOpen}>
-        <DialogContent className="max-w-sm w-[94vw] rounded-2xl dark:bg-[#0d1109] dark:border-white/10">
+        <DialogContent className="max-w-sm w-[94vw] rounded-2xl bg-white dark:bg-[#161b22] dark:border-white/10">
           <DialogHeader>
-             <DialogTitle className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
-               <Trash2 className="w-5 h-5" /> Xác nhận xoá tài khoản
-             </DialogTitle>
+            <DialogTitle className="text-base font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+              <Trash2 className="w-4 h-4" /> Xác nhận xoá
+            </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-slate-600 dark:text-slate-300 py-2">
-            Bạn chắc chắn muốn xoá tài khoản <span className="font-bold text-slate-900 dark:text-white">{delTarget?.email}</span>? Hành động này không thể hoàn tác.
+            Xoá tài khoản <span className="font-bold text-slate-900 dark:text-white">{delTarget?.email}</span>? Không thể hoàn tác.
           </p>
-          {delError && (
-            <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg px-3 py-2 border border-red-100 dark:border-red-900/50">{delError}</p>
-          )}
-          <div className="flex gap-3 pt-1">
-            <Button variant="outline" className="flex-1 dark:border-white/10 dark:text-slate-300" onClick={() => setDelOpen(false)}>Huỷ</Button>
-            <Button className="flex-1 bg-red-600 hover:bg-red-700 text-white gap-2" onClick={handleDelete} disabled={deleting}>
-              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              Xoá tài khoản
+          {delError && <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10 rounded-xl px-3 py-2 border border-red-100 dark:border-red-500/20">{delError}</p>}
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" className="flex-1 h-10 rounded-xl dark:border-white/10" onClick={() => setDelOpen(false)}>Huỷ</Button>
+            <Button className="flex-1 h-10 rounded-xl bg-red-600 hover:bg-red-700 text-white gap-1.5" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} Xoá
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit Profile Dialog ── */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md w-[96vw] rounded-2xl bg-white dark:bg-[#161b22] dark:border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Edit2 className="w-4 h-4 text-blue-500" /> Sửa hồ sơ
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">{editTarget?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Họ tên</Label>
+              <Input placeholder="Trần Văn A" value={editFullName} onChange={e => setEditFullName(e.target.value)}
+                className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phân quyền</Label>
+              <select value={editRole} onChange={e => setEditRole(e.target.value)}
+                className="w-full h-10 px-3 text-sm bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-slate-200 outline-none focus:border-blue-500">
+                <option value="super_admin">Super Admin — Toàn quyền</option>
+                <option value="unit_admin">Unit Admin — Giới hạn đơn vị</option>
+              </select>
+            </div>
+            {editRole === "unit_admin" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Đơn vị uỷ quyền</Label>
+                <Input placeholder="Đại đội 1" value={editUnit} onChange={e => setEditUnit(e.target.value)}
+                  className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" />
+                <p className="text-[10px] text-slate-400">Phải khớp chính xác tên đơn vị trong danh sách chiến sĩ.</p>
+              </div>
+            )}
+            {editError && <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10 rounded-xl px-3 py-2 border border-red-100 dark:border-red-500/20">{editError}</p>}
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1 h-10 rounded-xl dark:border-white/10" onClick={() => setEditOpen(false)}>Huỷ</Button>
+              <Button className="flex-1 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white gap-1.5" onClick={handleEditProfile} disabled={editSaving}>
+                {editSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Edit2 className="w-3.5 h-3.5" />} Lưu
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
