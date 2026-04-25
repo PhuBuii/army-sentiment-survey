@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 
 // Helper to get admin client
 function getAdminClient() {
@@ -233,3 +234,95 @@ export async function deleteQuestions(ids: string[]) {
   if (error) return { error: error.message };
   return { success: true };
 }
+
+// ── Personal Profile & Security ──────────────────────────────────────────────
+export async function updateProfileAction(formData: FormData) {
+  const supabase = await createClient();
+  const fullName = formData.get("full_name") as string;
+  const rank = formData.get("rank") as string;
+
+  const { error } = await supabase.auth.updateUser({
+    data: { 
+      full_name: fullName,
+      rank: rank
+    }
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  // Sync with admin_profiles table
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await supabase.from('admin_profiles').upsert({
+      id: user.id,
+      full_name: fullName,
+      rank: rank,
+      role: user.user_metadata?.role || 'super_admin'
+    });
+  }
+
+  revalidatePath("/admin/profile");
+  return { success: true };
+}
+
+export async function updatePasswordAction(formData: FormData) {
+  const supabase = await createClient();
+  const newPassword = formData.get("new_password") as string;
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+export async function uploadAvatarAction(formData: FormData) {
+  const supabase = await createClient();
+  const file = formData.get("file") as File;
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user || !file) return { success: false, error: "Thiếu thông tin người dùng hoặc tệp tin." };
+
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+  const filePath = `${fileName}`;
+
+  // 1. Upload to Storage (Bucket: 'avatars')
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filePath, file);
+
+  if (uploadError) return { success: false, error: uploadError.message };
+
+  // 2. Get Public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('avatars')
+    .getPublicUrl(filePath);
+
+  // 3. Update Auth User Metadata & Profile Table
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: { avatar_url: publicUrl }
+  });
+
+  if (updateError) return { success: false, error: updateError.message };
+
+  // Also update admin_profiles table (using upsert to ensure record exists)
+  await supabase.from('admin_profiles').upsert({ 
+    id: user.id,
+    avatar_url: publicUrl,
+    full_name: user.user_metadata?.full_name,
+    rank: user.user_metadata?.rank,
+    role: user.user_metadata?.role || 'super_admin'
+  });
+
+  revalidatePath("/admin/profile");
+  return { success: true, url: publicUrl };
+}
+
+

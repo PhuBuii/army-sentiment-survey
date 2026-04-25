@@ -22,8 +22,15 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase/client";
 import { markSubmissionResolved } from "@/app/actions/admin-actions";
-import { Loader2, TrendingUp, Users, Target, Activity, ArrowRight, ShieldAlert, ShieldCheck, Printer } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { 
+  Users, Target, Activity, Printer, 
+  ArrowRight, ShieldCheck, TrendingUp,
+  Loader2, Calendar
+} from "lucide-react";
+import { 
+  PieChart, Pie, Cell, ResponsiveContainer, 
+  Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid 
+} from "recharts";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Pagination } from "@/components/ui/pagination";
@@ -61,6 +68,7 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, completed: 0, warning: 0 });
   const [chartData, setChartData] = useState<{name: string, value: number}[]>([]);
+  const [trendData, setTrendData] = useState<{date: string, score: number}[]>([]);
   const [recentSoldiers, setRecentSoldiers] = useState<Soldier[]>([]);
   
   const [selectedSoldier, setSelectedSoldier] = useState<Soldier | null>(null);
@@ -109,6 +117,24 @@ function DashboardContent() {
       setChartData(Object.keys(statusCounts).map(status => ({
         name: status,
         value: statusCounts[status]
+      })));
+
+      // --- Process Trend Data ---
+      const allSubs = filteredSoldiersData
+        .flatMap(s => s.submissions || [])
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      
+      const dayMap: Record<string, { sum: number, count: number }> = {};
+      allSubs.forEach(sub => {
+        const dateStr = new Date(sub.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+        if (!dayMap[dateStr]) dayMap[dateStr] = { sum: 0, count: 0 };
+        dayMap[dateStr].sum += sub.ai_score;
+        dayMap[dateStr].count += 1;
+      });
+
+      setTrendData(Object.keys(dayMap).map(date => ({
+        date,
+        score: Math.round(dayMap[date].sum / dayMap[date].count)
       })));
 
       const recent = [...filteredSoldiersData]
@@ -172,7 +198,13 @@ function DashboardContent() {
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: A4; margin: 15mm 20mm; }
-          body { background: white !important; color: black !important; font-family: "Times New Roman", serif !important; }
+          body { 
+            background: white !important; 
+            color: black !important; 
+            font-family: "Times New Roman", Times, serif !important; 
+            text-rendering: optimizeLegibility !important;
+            -webkit-font-smoothing: antialiased !important;
+          }
           nav, aside, .no-print, button, select, .pagination-nav, [role="combobox"] { display: none !important; }
           .print-only { display: block !important; }
           .card { border: 1px solid #000 !important; box-shadow: none !important; margin-bottom: 10px !important; break-inside: avoid !important; }
@@ -181,6 +213,7 @@ function DashboardContent() {
           tr { break-inside: avoid !important; break-after: auto !important; }
           thead { display: table-header-group !important; }
           th { background-color: #f2f2f2 !important; }
+          h1, h2, h3, p, span, td, th { font-family: "Times New Roman", Times, serif !important; }
         }
       ` }} />
 
@@ -329,7 +362,57 @@ function DashboardContent() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Chart */}
+          {/* Trend Chart */}
+          <Card className="lg:col-span-2 shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22] flex flex-col">
+            <CardHeader className="pb-2 p-4 sm:p-6 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Diễn biến tư tưởng</CardTitle>
+                <p className="text-[10px] text-slate-500 mt-1">Điểm trung bình toàn đơn vị theo ngày</p>
+              </div>
+              <Calendar className="w-4 h-4 text-slate-400" />
+            </CardHeader>
+            <CardContent className="flex-1 p-4 sm:p-6 pt-0">
+               {trendData.length > 0 ? (
+                  <div className="w-full h-[220px] sm:h-[250px] mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={trendData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="date" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 10, fill: '#94a3b8' }}
+                          dy={10}
+                        />
+                        <YAxis 
+                          hide 
+                          domain={[0, 100]}
+                        />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: 'rgb(15 23 42)', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '12px' }}
+                          itemStyle={{ color: '#10b981' }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="score" 
+                          stroke="#10b981" 
+                          strokeWidth={3} 
+                          dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
+                          activeDot={{ r: 6, strokeWidth: 0 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 py-10">
+                    <Activity className="w-10 h-10 mb-3 opacity-20" />
+                    <p className="text-xs">Chưa có đủ dữ liệu để vẽ biểu đồ diễn biến.</p>
+                  </div>
+                )}
+            </CardContent>
+          </Card>
+
+          {/* Pie Chart */}
           <Card className="lg:col-span-1 shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22] flex flex-col">
             <CardHeader className="pb-2 p-4 sm:p-6">
               <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tỷ trọng tâm lý</CardTitle>
@@ -366,7 +449,7 @@ function DashboardContent() {
           </Card>
 
           {/* Recent table */}
-          <Card className="lg:col-span-2 shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22] overflow-hidden flex flex-col">
+          <Card className="lg:col-span-3 shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22] overflow-hidden flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-white/8 p-4 sm:p-6 py-3.5 sm:py-4">
               <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Cập nhật gần nhất</CardTitle>
               <Link href="/admin/soldiers" className="text-[12px] sm:text-[13px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium flex items-center gap-1">

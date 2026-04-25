@@ -82,8 +82,6 @@ Hệ thống vận hành theo một chu trình khép kín và bảo mật tuyệ
 *   [x] Tích hợp AI Gemini phân tích chuyên sâu.
 *   [x] Hệ thống xuất báo cáo PDF chính quy.
 *   [x] Tối ưu hóa giao diện đa nền tảng.
-*   [ ] Dự báo xu hướng tâm lý theo tháng/quý.
-*   [ ] Tích hợp thông báo qua Telegram/Email cho Chỉ huy khi có ca "Nguy cơ".
 
 ---
 *Tài liệu được cập nhật tự động bởi hệ thống Quản lý Tư tưởng Quân đội - 2026*

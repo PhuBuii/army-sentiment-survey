@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { logout } from "@/app/login/actions";
 import {
   LayoutDashboard, UsersRound, HelpCircle,
-  LogOut, ChevronRight, UserCog, Loader2
+  LogOut, ChevronRight, UserCog, Loader2, UserCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -98,12 +98,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </h2>
           </div>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-1">
+          <Link href="/admin/profile">
+            <Button
+              variant="ghost" size="icon"
+              className={`w-9 h-9 rounded-xl ${pathname === '/admin/profile' ? 'text-emerald-500 bg-emerald-500/10' : 'text-slate-400'}`}
+            >
+              <UserCircle2 size={18} />
+            </Button>
+          </Link>
           <ThemeToggle />
           <form action={logout}>
             <Button
               type="submit" variant="ghost" size="icon"
-              className="w-9 h-9 ml-0.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl"
+              className="w-9 h-9 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl"
             >
               <LogOut size={17} />
             </Button>
@@ -172,16 +180,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </p>
             </div>
           </div>
-          <form action={logout}>
-            <Button
-              type="submit" variant="ghost"
-              className="w-full justify-start text-slate-500 hover:text-red-400 hover:bg-red-500/10
-                         gap-2 h-9 text-[13px] rounded-xl"
-            >
-              <LogOut size={14} />
-              Đăng xuất
-            </Button>
-          </form>
+          
+          <div className="space-y-1">
+            <Link href="/admin/profile">
+              <Button
+                variant="ghost"
+                className={`w-full justify-start gap-2 h-9 text-[13px] rounded-xl transition-all
+                            ${pathname === '/admin/profile' 
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shadow-sm' 
+                              : 'text-slate-500 hover:text-slate-200 hover:bg-white/[.05] border-transparent border'}`}
+              >
+                <UserCircle2 size={14} />
+                Cài đặt tài khoản
+              </Button>
+            </Link>
+            <form action={logout}>
+              <Button
+                type="submit" variant="ghost"
+                className="w-full justify-start text-slate-500 hover:text-red-400 hover:bg-red-500/10
+                           gap-2 h-9 text-[13px] rounded-xl"
+              >
+                <LogOut size={14} />
+                Đăng xuất
+              </Button>
+            </form>
+          </div>
         </div>
       </aside>
 
