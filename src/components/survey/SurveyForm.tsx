@@ -83,6 +83,7 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
   const [aiDone, setAiDone]       = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [apiError, setApiError]   = useState("");
+  const [submissionResult, setSubmissionResult] = useState<{ success?: boolean; error?: string } | null>(null);
   const textareaRef               = useRef<HTMLTextAreaElement>(null);
   const isOnline = useNetworkStatus();
   const [showOfflineAlert, setShowOfflineAlert] = useState(false);
@@ -163,6 +164,24 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
     };
     run();
   }, [phase]);
+
+  // Handle transition to success or error after AI animation AND API result
+  useEffect(() => {
+    if (phase !== "analyzing" || !submissionResult) return;
+
+    const isFailed = submissionResult.error;
+    
+    if (aiDone || isFailed) {
+      if (isFailed) {
+        setErrorStr(submissionResult.error || "Hệ thống đang bận hoặc có lỗi xảy ra. Vui lòng thử lại sau.");
+        setPhase("preview");
+        setSubmissionResult(null); // Reset for retry
+      } else {
+        localStorage.removeItem(draftKey);
+        setPhase("success");
+      }
+    }
+  }, [phase, aiDone, submissionResult, draftKey]);
 
   const currentQ   = localQuestions[currentStep] || { id: "temp", content: "" };
   const currentAns = currentQ.id ? (answers[currentQ.id] ?? "") : "";
@@ -304,17 +323,7 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
 
     const payload = localQuestions.map(q => ({ question: q.content, answer: answers[q.id] ?? "" }));
     const result  = await submitSurveyAndAnalyze(soldier.id, payload);
-
-    // wait until AI animation finishes before showing result
-    const check = () => {
-      if (aiDone || result.error) {
-        if (result.error) { setErrorStr(result.error); setPhase("preview"); }
-        else setPhase("success");
-      } else {
-        setTimeout(check, 300);
-      }
-    };
-    check();
+    setSubmissionResult(result || { error: "Không nhận được phản hồi từ máy chủ." });
   };
 
   // ─────────────────────────────────────────────────────────────────────────

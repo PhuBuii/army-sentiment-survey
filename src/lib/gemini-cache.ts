@@ -45,12 +45,12 @@ export async function setupMilitaryContextCache(massiveStringDocument: string) {
 
 /**
  * CÁCH SỬ DỤNG:
- * Tại nơi khởi tạo AI (Ví dụ trong api/interview/route.ts)
+ * tại nơi khởi tạo AI (Ví dụ trong api/interview/route.ts)
  * 
  * const genAI = new GoogleGenerativeAI(apiKey);
  * 
  * // THAY VÌ 
- * // const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+ * // const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
  * 
  * // BẠN DÙNG
  * // const model = genAI.getGenerativeModelFromCachedContent({ name: "cachedContents/xyz123abc" })

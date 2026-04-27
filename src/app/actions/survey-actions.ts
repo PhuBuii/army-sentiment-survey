@@ -64,6 +64,20 @@ export async function submitSurveyAndAnalyze(
   responses: { question: string; answer: string }[]
 ) {
   try {
+    const adminSupabase = getAdminClient();
+
+    // 0. Check if already completed to prevent duplicate submissions
+    const { data: currentSoldier } = await adminSupabase
+      .from("soldiers")
+      .select("is_completed")
+      .eq("id", soldierId)
+      .single();
+
+    if (currentSoldier?.is_completed) {
+      console.warn(`[Submit] Soldier ${soldierId} already completed. Blocking submission.`);
+      return { error: "Đồng chí đã hoàn thành khảo sát này rồi." };
+    }
+
     // 1. AI Analysis with Fallback and Retry
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -74,11 +88,12 @@ export async function submitSurveyAndAnalyze(
     // Cập nhật danh sách model dự phòng mới nhất theo tài liệu từ Google (Tháng 4/2026)
     // Ưu tiên bản 2.5-flash vì đã có Cache, sau đó chuyển sang các bản ổn định hoặc preview mạnh mẽ.
     const modelsToTry = [
-      "gemini-2.5-flash",              // Ổn định, hỗ trợ Cache (Ưu tiên số 1)
-      "gemini-2.5-pro",                // Ổn định, siêu thông minh (Dự phòng số 2)
-      "gemini-3.1-pro-preview",        // Bản Preview mới nhất, suy luận logic phức tạp
-      "gemini-3-flash-preview",        // Bản Flash mới, tối ưu chi phí và tốc độ
-      "gemini-3.1-flash-lite-preview"  // Nhanh nhất, chi phí cực thấp (Dự phòng cuối cùng)
+      "gemini-2.0-flash",              // Ổn định nhất (Ưu tiên số 1)
+      "gemini-2.0-pro-exp-02-05",      // Siêu thông minh (Dự phòng số 2)
+      "gemini-2.5-flash",              // Bản mới nhất 2.5 (Ưu tiên số 3)
+      "gemini-2.5-pro",                // Bản Pro 2.5
+      "gemini-3-flash-preview",        // Bản Flash 3 mới
+      "gemini-3.1-pro-preview",        // Bản Pro 3.1 mới nhất
     ];
     // 2. Lấy Cache Name động từ Supabase (được cập nhật tự động bởi Cron Job)
     let cacheName: string | null = null;
@@ -110,8 +125,8 @@ export async function submitSurveyAndAnalyze(
           console.log(`Trying model: ${modelName} (Attempt ${retries + 1})`);
           let model;
           
-          // CRITICAL: Context Caching only works if the model name matches exactly what was used to create the cache
-          const isCacheCompatible = cacheName && (modelName === "gemini-2.5-flash" || modelName === "models/gemini-2.5-flash");
+          // Kiểm tra tương thích Cache (Gemini 2.x trở lên hỗ trợ tốt)
+          const isCacheCompatible = cacheName && (modelName.includes("flash") || modelName.includes("pro"));
 
           if (isCacheCompatible) {
             model = genAI.getGenerativeModel({ 
@@ -146,8 +161,7 @@ Hãy xuất dữ liệu dưới dạng JSON thuần theo đúng cấu trúc yêu
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: {
               responseMimeType: "application/json",
-              // Chỉ áp dụng schema cho các model 1.5 để tránh lỗi 400 ở model cũ
-              ...(modelName.includes("1.5") ? { responseSchema: schema as any } : {}),
+              responseSchema: schema as any, // Luôn áp dụng schema vì các model 2.x/3.x đều hỗ trợ
             }
           });
           let textResult = result.response.text();
@@ -157,10 +171,17 @@ Hãy xuất dữ liệu dưới dạng JSON thuần theo đúng cấu trúc yêu
 
           try {
             aiData = JSON.parse(textResult);
+            
+            // Validate required fields if schema wasn't strictly enforced
+            if (aiData.score === undefined || aiData.status === undefined || aiData.summary === undefined) {
+              console.error("AI missing fields:", aiData);
+              throw new Error("Kết quả AI thiếu thông tin quan trọng.");
+            }
+
             break; // Success! Exit retry loop
           } catch (e) {
-            console.error(`AI parse fail for ${modelName}`, textResult);
-            throw new Error("Lỗi phân tích cú pháp kết quả từ AI.");
+            console.error(`AI parse/validate fail for ${modelName}`, textResult);
+            throw new Error(`Lỗi xử lý kết quả từ AI (${modelName}).`);
           }
         } catch (err: any) {
           lastError = err;
@@ -185,7 +206,7 @@ Hãy xuất dữ liệu dưới dạng JSON thuần theo đúng cấu trúc yêu
     }
 
     // 2. Database Operations (System Level)
-    const adminSupabase = getAdminClient();
+    console.log(`[DB] Saving submission for soldier: ${soldierId}`);
 
     // 2.1 Save submission
     let { error: insertError } = await adminSupabase.from("submissions").insert({
@@ -212,7 +233,12 @@ Hãy xuất dữ liệu dưới dạng JSON thuần theo đúng cấu trúc yêu
       insertError = retryError;
     }
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error("[DB] Insert submission failed:", insertError);
+      throw insertError;
+    }
+
+    console.log(`[DB] Submission saved successfully. Marking soldier as completed.`);
 
     // 2.2 Mark soldier as completed
     const { error: updateError } = await adminSupabase

@@ -18,12 +18,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase/client";
-import { updateSubmissionStatus, createSoldier, updateSoldier, deleteSoldiers } from "@/app/actions/admin-actions";
+import { updateSubmissionStatus, createSoldier, updateSoldier, deleteSoldiers, resetSoldierSurvey } from "@/app/actions/admin-actions";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExcelUploadDialog } from "@/components/ui/ExcelUploadDialog";
 import {
   ClipboardCopy, Loader2, Upload, UsersRound, Eye, MessageSquare, QrCode,
-  Brain, Edit2, CheckCircle2, ChevronDown, FileText, UserPlus, Trash2, X, Search, Filter
+  Brain, Edit2, CheckCircle2, ChevronDown, FileText, UserPlus, Trash2, X, Search, Filter, RotateCcw
 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { useSearchParams } from "next/navigation";
@@ -98,6 +98,8 @@ export default function SoldiersPage() {
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -224,6 +226,20 @@ export default function SoldiersPage() {
     setIsConfirmOpen(false);
     if (res.error) toast.error("Lỗi: " + res.error);
     else { toast.success("Đã xoá thành công"); setSelectedIds([]); fetchData(); }
+  };
+  
+  const handleResetSurvey = async () => {
+    if (!selected) return;
+    setIsResetting(true);
+    const res = await resetSoldierSurvey(selected.id);
+    setIsResetting(false);
+    setIsResetConfirmOpen(false);
+    if (res.error) toast.error("Lỗi: " + res.error);
+    else {
+      toast.success("Đã reset trạng thái khảo sát.");
+      setDialogOpen(false);
+      fetchData();
+    }
   };
 
   const handleExportQRExcel = async () => {
@@ -512,10 +528,16 @@ export default function SoldiersPage() {
                       </Button>
                     </>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => setEditingStatus(true)}
-                      className="h-8 text-xs rounded-lg border-slate-200 dark:border-white/10 gap-1">
-                      <Edit2 className="w-3 h-3" /> Sửa phân loại
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setIsResetConfirmOpen(true)}
+                        className="h-8 text-xs rounded-lg border-red-200 text-red-600 hover:bg-red-50 dark:border-red-500/20 dark:text-red-400 dark:hover:bg-red-500/10 gap-1">
+                        <RotateCcw className="w-3 h-3" /> Khảo sát lại
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingStatus(true)}
+                        className="h-8 text-xs rounded-lg border-slate-200 dark:border-white/10 gap-1">
+                        <Edit2 className="w-3 h-3" /> Sửa phân loại
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -586,6 +608,11 @@ export default function SoldiersPage() {
         isLoading={isDeleting} title="Xác nhận xoá"
         description={`Xoá ${selectedIds.length} chiến sĩ? Hành động này không thể hoàn tác.`}
         confirmText="Xoá" variant="danger" />
+
+      <ConfirmDialog isOpen={isResetConfirmOpen} onOpenChange={setIsResetConfirmOpen} onConfirm={handleResetSurvey}
+        isLoading={isResetting} title="Xác nhận reset khảo sát"
+        description={`Bạn có chắc chắn muốn cho phép chiến sĩ ${selected?.full_name} làm lại khảo sát? Dữ liệu cũ sẽ bị xoá.`}
+        confirmText="Xác nhận" variant="danger" />
 
       <ExcelUploadDialog isOpen={uploadDialogOpen} onOpenChange={setUploadDialogOpen} onUpload={handleFileUpload}
         isUploading={uploading} title="Import danh sách"

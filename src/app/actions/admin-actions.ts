@@ -325,4 +325,32 @@ export async function uploadAvatarAction(formData: FormData) {
   return { success: true, url: publicUrl };
 }
 
+// ── Reset Survey ─────────────────────────────────────────────────────────────
+export async function resetSoldierSurvey(soldierId: string) {
+  try {
+    const supabaseAdmin = getAdminClient();
+    
+    // 1. Delete all submissions for this soldier
+    const { error: deleteError } = await supabaseAdmin
+      .from("submissions")
+      .delete()
+      .eq("soldier_id", soldierId);
+    
+    if (deleteError) return { error: deleteError.message };
+
+    // 2. Reset completion status
+    const { error: updateError } = await supabaseAdmin
+      .from("soldiers")
+      .update({ is_completed: false })
+      .eq("id", soldierId);
+
+    if (updateError) return { error: updateError.message };
+
+    revalidatePath("/admin/soldiers");
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || "Lỗi không xác định khi reset khảo sát." };
+  }
+}
+
 
