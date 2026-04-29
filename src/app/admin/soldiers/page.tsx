@@ -65,7 +65,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function SoldiersPage() {
+function SoldiersContent() {
   const [soldiers, setSoldiers] = useState<Soldier[]>([]);
   const [loading, setLoading]   = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -619,5 +619,13 @@ export default function SoldiersPage() {
         description="Upload file Excel với cột full_name và unit."
         sampleFileName="mau_chien_si.xlsx" sampleFileUrl="/mau_chien_si.xlsx" />
     </div>
+  );
+}
+
+export default function SoldiersPage() {
+  return (
+    <React.Suspense fallback={<div className="p-10 text-center"><Loader2 className="animate-spin mx-auto mb-2" /> Đang tải danh sách...</div>}>
+      <SoldiersContent />
+    </React.Suspense>
   );
 }

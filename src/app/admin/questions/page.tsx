@@ -22,7 +22,7 @@ import { useSearchParams } from "next/navigation";
 
 type Question = { id: string; content: string; created_at: string };
 
-export default function QuestionsPage() {
+function QuestionsContent() {
   const [questions, setQuestions]     = useState<Question[]>([]);
   const [loading, setLoading]         = useState(true);
   const [uploading, setUploading]     = useState(false);
@@ -250,5 +250,13 @@ export default function QuestionsPage() {
         description="Upload file Excel với cột content."
         sampleFileName="mau_cau_hoi.xlsx" sampleFileUrl="/mau_cau_hoi.xlsx" />
     </div>
+  );
+}
+
+export default function QuestionsPage() {
+  return (
+    <React.Suspense fallback={<div className="p-10 text-center"><Loader2 className="animate-spin mx-auto mb-2" /> Đang tải câu hỏi...</div>}>
+      <QuestionsContent />
+    </React.Suspense>
   );
 }

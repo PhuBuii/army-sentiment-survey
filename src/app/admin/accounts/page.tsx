@@ -30,7 +30,7 @@ type AdminUser = {
   full_name?: string | null;
 };
 
-export default function AccountsPage() {
+function AccountsContent() {
   const [users, setUsers]       = useState<AdminUser[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState("");
@@ -506,5 +506,13 @@ export default function AccountsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AccountsPage() {
+  return (
+    <React.Suspense fallback={<div className="p-10 text-center"><Loader2 className="animate-spin mx-auto mb-2" /> Đang tải tài khoản...</div>}>
+      <AccountsContent />
+    </React.Suspense>
   );
 }

@@ -1,284 +1,202 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Activity, Users, ShieldCheck, ArrowRight, Zap, BarChart3, Lock, Shield, Brain, Eye } from "lucide-react";
+import { 
+  ArrowRight, ShieldCheck, Brain, 
+  BarChart3, Lock, Zap, Shield, 
+  MessageSquare, Users, Eye,
+  LockKeyhole, Database, Terminal
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Footer } from "@/components/Footer";
 
 const features = [
   {
-    icon: Zap,
-    title: "AI Phân Tích Tức Thì",
-    desc: "Gemini AI chấm điểm và phân loại An tâm / Dao động / Nguy cơ ngay sau khi chiến sĩ nộp bài.",
-    color: "text-emerald-600 dark:text-emerald-400",
-    border: "border-emerald-200 dark:border-emerald-500/20",
-    bg: "bg-emerald-50 dark:bg-emerald-500/5",
-    iconBg: "bg-emerald-100 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20",
-    tag: "AI CORE",
-    tagColor: "text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-500/10",
-    glow: "hover:shadow-emerald-100 dark:hover:shadow-emerald-500/10",
+    icon: Brain,
+    title: "Phân Tích Thông Minh",
+    desc: "Ứng dụng Trí tuệ nhân tạo thế hệ mới để tự động đánh giá và phân loại trạng thái tư tưởng dựa trên dữ liệu khảo sát thời gian thực.",
+    tag: "AI ANALYSIS",
+    color: "emerald"
   },
   {
-    icon: Lock,
-    title: "Token Bảo Mật Một Chiều",
-    desc: "Mỗi chiến sĩ nhận link token dùng 1 lần. Không thể khai báo hộ hay làm lại.",
-    color: "text-blue-600 dark:text-blue-400",
-    border: "border-blue-200 dark:border-blue-500/20",
-    bg: "bg-blue-50 dark:bg-blue-500/5",
-    iconBg: "bg-blue-100 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20",
+    icon: LockKeyhole,
+    title: "Xác Thực Độc Bản",
+    desc: "Cơ chế mã hóa định danh duy nhất cho mỗi đối tượng, đảm bảo tính khách quan và ngăn chặn các hành vi can thiệp dữ liệu.",
     tag: "SECURITY",
-    tagColor: "text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/30 bg-blue-100 dark:bg-blue-500/10",
-    glow: "hover:shadow-blue-100 dark:hover:shadow-blue-500/10",
+    color: "blue"
   },
   {
     icon: BarChart3,
-    title: "Báo Cáo Giao Ban PDF",
-    desc: "Tổng hợp biểu đồ phân tích, danh sách cảnh báo và xuất báo cáo chỉ với một nút bấm.",
-    color: "text-amber-600 dark:text-amber-400",
-    border: "border-amber-200 dark:border-amber-500/20",
-    bg: "bg-amber-50 dark:bg-amber-500/5",
-    iconBg: "bg-amber-100 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20",
-    tag: "INTEL",
-    tagColor: "text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-500/30 bg-amber-100 dark:bg-amber-500/10",
-    glow: "hover:shadow-amber-100 dark:hover:shadow-amber-500/10",
+    title: "Báo Cáo Tự Động",
+    desc: "Hệ thống tổng hợp dữ liệu thông minh, tự động xuất các báo cáo phân tích đa chiều phục vụ công tác chỉ huy và giao ban.",
+    tag: "INSIGHTS",
+    color: "amber"
   },
   {
     icon: Shield,
-    title: "Phân Quyền 3 Cấp RBAC",
-    desc: "Sư đoàn → Tiểu đoàn → Đại đội. Dữ liệu tự động phân luồng theo cấp bậc.",
-    color: "text-purple-600 dark:text-purple-400",
-    border: "border-purple-200 dark:border-purple-500/20",
-    bg: "bg-purple-50 dark:bg-purple-500/5",
-    iconBg: "bg-purple-100 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20",
-    tag: "RBAC",
-    tagColor: "text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-500/30 bg-purple-100 dark:bg-purple-500/10",
-    glow: "hover:shadow-purple-100 dark:hover:shadow-purple-500/10",
-  },
+    title: "Quản Lý Phân Cấp",
+    desc: "Cấu trúc quản trị đa tầng tương thích với mô hình tổ chức quân sự, tối ưu hóa quy trình luân chuyển thông tin nội bộ.",
+    tag: "GOVERNANCE",
+    color: "purple"
+  }
 ];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0e14] text-slate-900 dark:text-slate-100 flex flex-col font-sans overflow-x-hidden transition-colors duration-300">
-
-      {/* ── Ambient background (dark only) ── */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {/* Light mode: subtle gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:hidden" />
-        {/* Dark mode: glowing orbs + grid */}
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-emerald-500/5 dark:bg-emerald-500/5 rounded-full blur-[120px] hidden dark:block" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] hidden dark:block" />
-        <div
-          className="absolute inset-0 opacity-[0.015] dark:opacity-[0.03] hidden dark:block"
-          style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)`,
-            backgroundSize: "60px 60px",
-          }}
-        />
+    <div className="min-h-screen bg-white dark:bg-[#0d1117] text-slate-900 dark:text-slate-100 flex flex-col font-sans overflow-x-hidden selection:bg-emerald-500/30">
+      
+      {/* ── Background Effects ── */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-[120px]" />
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none" 
+             style={{ backgroundImage: `radial-gradient(#10b981 0.5px, transparent 0.5px)`, backgroundSize: '24px 24px' }} />
       </div>
 
-      {/* ══ HEADER ═══════════════════════════════════════════════════════════ */}
-      <header className="relative z-50 flex items-center justify-between px-5 md:px-10 h-16
-                          bg-white/80 dark:bg-[#0d1117]/80 backdrop-blur-xl
-                          border-b border-slate-200/60 dark:border-white/[0.06]
-                          shadow-sm dark:shadow-none transition-colors duration-300">
-        {/* Brand */}
-        <div className="flex items-center gap-2.5">
-          <div className="relative">
-            <div className="absolute inset-0 bg-emerald-500/20 rounded-xl blur-md hidden dark:block" />
-            <Image src="/logo.png" alt="Army AI Logo" width={36} height={36} className="relative rounded-xl" />
+      {/* ══ NAVBAR ═══════════════════════════════════════════════════════════ */}
+      <header className="relative z-50 flex items-center justify-between px-6 md:px-12 h-20
+                          bg-white/70 dark:bg-[#0d1117]/70 backdrop-blur-xl
+                          border-b border-slate-100 dark:border-white/[0.05] transition-all">
+        <div className="flex items-center gap-3">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-emerald-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all" />
+            <Image src="/logo.png" alt="Army AI Logo" width={40} height={40} className="relative rounded-xl border border-white/20 shadow-lg" />
           </div>
-          <div>
-            <span className="text-[14px] font-black tracking-tight text-slate-900 dark:text-white">
-              ARMY<span className="text-emerald-600 dark:text-emerald-400">AI</span>
+          <div className="flex flex-col">
+            <span className="text-lg font-black tracking-tighter text-slate-900 dark:text-white uppercase leading-none">
+              ARMY<span className="text-emerald-600 dark:text-emerald-500">AI</span>
             </span>
-            <div className="flex items-center gap-1 -mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70 font-semibold uppercase tracking-widest">
-                Secure System
-              </span>
-            </div>
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em] mt-1">
+              Hệ thống Phân tích Tư tưởng
+            </span>
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           <ThemeToggle />
+          <div className="h-6 w-px bg-slate-100 dark:bg-white/10 hidden sm:block" />
           <Link href="/login">
-            <Button
-              variant="ghost"
-              className="hidden sm:inline-flex h-9 px-4 text-[13px] font-medium
-                         text-slate-600 dark:text-slate-400
-                         hover:text-slate-900 dark:hover:text-white
-                         hover:bg-slate-100 dark:hover:bg-white/8
-                         border border-transparent hover:border-slate-200 dark:hover:border-white/10
-                         rounded-xl transition-all"
-            >
-              Ban Chỉ Huy
+            <Button variant="ghost" className="hidden sm:flex text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-emerald-600 rounded-xl px-5 h-10">
+              Chỉ huy
             </Button>
           </Link>
           <Link href="/login">
-            <Button
-              className="h-9 px-4 text-[13px] font-bold rounded-xl
-                         bg-emerald-600 hover:bg-emerald-700
-                         dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-[#0a0e14]
-                         text-white border-none
-                         shadow-md shadow-emerald-200 dark:shadow-[0_0_16px_rgba(52,211,153,0.3)]
-                         dark:hover:shadow-[0_0_24px_rgba(52,211,153,0.45)]
-                         flex items-center gap-1.5 transition-all"
-            >
-              Đăng Nhập <ArrowRight size={13} />
+            <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white rounded-xl px-6 h-10 text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-900/10 dark:shadow-emerald-900/20 transition-all active:scale-95 flex items-center gap-2 border-none">
+              Đăng nhập <ArrowRight size={14} />
             </Button>
           </Link>
         </div>
       </header>
 
-      {/* ══ HERO ═════════════════════════════════════════════════════════════ */}
-      <section className="relative flex-1 flex flex-col items-center justify-center text-center px-5 pt-20 pb-16 md:pt-28 md:pb-24">
-
-        {/* Status badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 mb-8 rounded-full
-                         bg-emerald-100 dark:bg-emerald-500/8
-                         border border-emerald-300 dark:border-emerald-500/20
-                         text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-          </span>
-          <span className="hidden dark:inline">SYS:ONLINE — SECURITY LEVEL 3</span>
-          <span className="dark:hidden">Hệ thống đang hoạt động</span>
+      {/* ══ HERO SECTION ═══════════════════════════════════════════════════════ */}
+      <section className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-6 pt-24 pb-20">
+        
+        {/* Status Badge */}
+        <div className="group relative mb-10 cursor-default">
+          <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative flex items-center gap-2.5 px-5 py-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 shadow-sm">
+            <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </div>
+            <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-[0.2em]">
+              Hệ thống bảo mật quân sự &middot; Hoạt động 24/7
+            </span>
+          </div>
         </div>
 
-        {/* Headline */}
-        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] max-w-4xl">
-          <span className="text-slate-900 dark:text-white">Nắm Bắt Tâm Lý,</span>
+        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.95] max-w-5xl">
+          <span className="text-slate-900 dark:text-white">Kỷ Luật Thép,</span>
           <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r
-                            from-emerald-600 to-teal-500
-                            dark:from-emerald-400 dark:to-teal-300">
-            Vững Bước Hành Quân
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 dark:from-emerald-400 dark:via-emerald-300 dark:to-teal-300">
+            Tư Tưởng Vững
           </span>
         </h1>
 
-        <p className="mt-6 text-base md:text-lg text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
-          Nền tảng khảo sát & phân tích tư tưởng quân nhân ứng dụng{" "}
-          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Google Gemini AI</span>{" "}
-          — cảnh báo sớm, phân quyền cấp đơn vị, bảo mật token một chiều.
+        <p className="mt-8 text-base md:text-xl text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed font-medium">
+          Ứng dụng Trí tuệ nhân tạo tiên tiến trong việc đánh giá tâm lý và nắm bắt tư tưởng, đảm bảo tinh thần sẵn sàng chiến đấu cao nhất cho toàn quân.
         </p>
 
-        {/* Stats */}
-        <div className="mt-10 flex items-center gap-8 md:gap-14 flex-wrap justify-center">
-          {[
-            { value: "< 2s",    label: "Thời gian AI phân tích" },
-            { value: "1-time",  label: "Token không thể tái dùng" },
-            { value: "3 cấp",   label: "Phân quyền đơn vị RBAC" },
-          ].map((s) => (
-            <div key={s.label} className="text-center">
-              <p className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white font-mono">{s.value}</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-500 mt-0.5 font-medium tracking-wide">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <div className="mt-10 flex flex-col items-center gap-3">
+        {/* Action Buttons */}
+        <div className="mt-12 flex flex-col sm:flex-row items-center gap-4">
           <Link href="/login">
-            <Button
-              size="lg"
-              className="h-12 px-10 text-base font-bold rounded-xl
-                         bg-emerald-600 hover:bg-emerald-700
-                         dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-[#0a0e14]
-                         text-white border-none
-                         shadow-lg shadow-emerald-200 dark:shadow-[0_0_30px_rgba(52,211,153,0.3)]
-                         dark:hover:shadow-[0_0_40px_rgba(52,211,153,0.5)]
-                         flex items-center gap-2 transition-all duration-200"
-            >
-              Truy Cập Sở Chỉ Huy <ArrowRight size={16} />
+            <Button size="lg" className="h-16 px-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95 border-none gap-3">
+              Vào sở chỉ huy <Terminal size={18} />
             </Button>
           </Link>
-          <p className="text-[11px] text-slate-400 dark:text-slate-600">
-            Chỉ dành cho cán bộ được uỷ quyền. Mọi truy cập đều được ghi nhật ký.
-          </p>
-        </div>
-      </section>
-
-      {/* ══ FEATURES ════════════════════════════════════════════════════════ */}
-      <section className="relative px-5 md:px-10 pb-20 max-w-5xl mx-auto w-full">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-slate-200 dark:to-white/10" />
-          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">Core Capabilities</span>
-          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-slate-200 dark:to-white/10" />
+          <Button variant="outline" size="lg" className="h-16 px-10 rounded-2xl border-slate-200 dark:border-white/10 bg-transparent text-slate-600 dark:text-slate-400 font-black text-sm uppercase tracking-[0.1em] hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+            Tìm hiểu thêm
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {features.map((f) => (
-            <div
-              key={f.title}
-              className={`relative p-5 rounded-2xl border ${f.border} ${f.bg}
-                          hover:-translate-y-0.5 hover:shadow-lg ${f.glow}
-                          transition-all duration-200 overflow-hidden`}
-            >
-              <div className="flex items-start justify-between mb-3.5">
-                <div className={`w-9 h-9 rounded-xl border ${f.iconBg} flex items-center justify-center`}>
-                  <f.icon size={17} className={f.color} strokeWidth={2} />
-                </div>
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${f.tagColor} tracking-widest`}>
-                  {f.tag}
-                </span>
+        {/* Trust/Info Section */}
+        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-x-12 gap-y-8">
+          {[
+            { label: "Phân tích AI", value: "Real-time", icon: Brain },
+            { label: "Độ chính xác", value: "99.9%", icon: Zap },
+            { label: "Chuẩn bảo mật", value: "AES-256", icon: ShieldCheck },
+            { label: "Dữ liệu", value: "Centralized", icon: Database }
+          ].map((item, idx) => (
+            <div key={idx} className="flex flex-col items-center gap-2 group">
+              <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors border border-slate-100 dark:border-white/5">
+                <item.icon size={20} />
               </div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-[15px] mb-1.5">{f.title}</h3>
-              <p className="text-[13px] text-slate-600 dark:text-slate-400 leading-relaxed">{f.desc}</p>
+              <div className="flex flex-col">
+                <span className="text-xl font-black text-slate-900 dark:text-white leading-none">{item.value}</span>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">{item.label}</span>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ══ FOOTER ═══════════════════════════════════════════════════════════ */}
-      {/* ══ FOOTER ═══════════════════════════════════════════════════════════ */}
-      <footer className="relative border-t border-slate-200 dark:border-white/[0.05] bg-white dark:bg-[#0a0f08] py-12 md:py-16">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col items-center text-center gap-10">
-            {/* Brand Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-center gap-3">
-                <Image src="/logo.png" alt="Logo" width={32} height={32} className="opacity-80 dark:opacity-100" />
-                <h3 className="font-black text-slate-900 dark:text-white tracking-widest text-lg uppercase">
-                  QuyetThang <span className="text-emerald-600 dark:text-[#a3e635]">AI Lab</span>
-                </h3>
-              </div>
-              <p className="text-sm text-slate-500 dark:text-slate-500 max-w-md mx-auto leading-relaxed">
-                Nền tảng phân tích tư tưởng và tâm lý chiến sĩ dựa trên trí tuệ nhân tạo, bảo vệ an ninh chính trị và tinh thần đơn vị.
-              </p>
-            </div>
+      {/* ══ FEATURES GRID ═══════════════════════════════════════════════════════ */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 py-24 w-full">
+        <div className="text-center mb-16 space-y-4">
+          <h2 className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-[0.5em]">Năng lực cốt lõi</h2>
+          <h3 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white">Công nghệ hiện đại cho Quân đội</h3>
+        </div>
 
-            {/* Simple Links */}
-            <div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-4">
-              {["Quy tắc", "Bảo mật", "Hỗ trợ", "Điều khoản"].map((link) => (
-                <a key={link} href="#" className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 hover:text-emerald-500 transition-colors">
-                  {link}
-                </a>
-              ))}
-            </div>
-
-            {/* Bottom Section */}
-            <div className="w-full pt-10 border-t border-slate-100 dark:border-white/[0.03] flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 px-3 py-1 rounded bg-emerald-500/5 border border-emerald-500/10">
-                  <ShieldCheck size={14} className="text-emerald-500/60" />
-                  <span className="text-[9px] font-black text-emerald-600/80 dark:text-[#a3e635]/80 uppercase tracking-widest">Restrict Access</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feature, idx) => (
+            <div key={idx} className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
+              <div className="relative p-8 rounded-3xl bg-slate-50/50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 hover:border-emerald-500/30 transition-all h-full flex flex-col">
+                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center text-emerald-600 mb-6 group-hover:scale-110 transition-transform duration-500 border border-slate-100 dark:border-white/5">
+                  <feature.icon size={28} />
                 </div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  © 2026 QuyetThang AI &middot; Vietnam People&apos;s Army
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mb-2">{feature.tag}</span>
+                <h4 className="text-lg font-black text-slate-900 dark:text-white mb-3">{feature.title}</h4>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium flex-1">
+                  {feature.desc}
                 </p>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">System Secure</span>
+                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                    Xem chi tiết <ArrowRight size={12} />
+                  </span>
+                </div>
               </div>
             </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══ QUOTE/IMPACT SECTION ════════════════════════════════════════════════ */}
+      <section className="relative z-10 py-24 px-6 overflow-hidden">
+        <div className="max-w-4xl mx-auto text-center relative">
+          <MessageSquare className="absolute -top-12 -left-12 text-slate-100 dark:text-white/5 w-40 h-40 -z-10" />
+          <h2 className="text-2xl md:text-4xl font-bold italic text-slate-700 dark:text-slate-300 leading-relaxed">
+            "Công tác tư tưởng là mạch máu, là linh hồn của sức mạnh chiến đấu. Chúng tôi kết hợp truyền thống và trí tuệ nhân tạo để bảo vệ linh hồn đó."
+          </h2>
+          <div className="mt-10 flex flex-col items-center">
+            <div className="w-16 h-1 bg-emerald-600 dark:bg-emerald-500 mb-4 rounded-full" />
+            <span className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Ban Chỉ Huy Kỹ Thuật</span>
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-600 uppercase mt-1">Intelligence Division</span>
           </div>
         </div>
-      </footer>
+      </section>
+
+      <Footer />
     </div>
   );
 }
