@@ -49,10 +49,10 @@ export function Footer() {
               </div>
               <div className="flex flex-col">
                 <span className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">
-                  ARMY<span className="text-emerald-600 dark:text-emerald-500">AI</span>
+                  Tâm tư<span className="text-emerald-600 dark:text-emerald-500"> Chiến sĩ</span>
                 </span>
                 <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] leading-none mt-0.5">
-                  Ban Chỉ Huy Kỹ Thuật
+                 Hệ thống phân tích tư tưởng
                 </span>
               </div>
             </div>
@@ -128,7 +128,7 @@ export function Footer() {
                 </Button>
 
                 <div className="flex items-center justify-center gap-3 pt-2">
-                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Email trực tiếp:</span>
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">Email:</span>
                   <a href="mailto:levanhien18022606@gmail.com" className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:underline tracking-tighter uppercase">
                     levanhien18022606@gmail.com
                   </a>
@@ -143,12 +143,12 @@ export function Footer() {
         <div className="pt-10 border-t border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col items-center md:items-start gap-1">
             <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-wider">
-              © 2026 ARMY AI SYSTEM. PHÁT TRIỂN VÌ QUÂN ĐỘI VỮNG MẠNH.
+              © 2026 TÂM TƯ CHIẾN SĨ.
             </p>
             <div className="flex items-center flex-wrap justify-center md:justify-start gap-x-4 gap-y-1">
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
                 <div className="w-1 h-1 rounded-full bg-red-500" />
-                TRUNG ÚY LÊ VĂN HIỂN
+                TRUNG ÚY LÊ VĂN HIỀN
               </div>
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
                 <div className="w-1 h-1 rounded-full bg-red-500" />

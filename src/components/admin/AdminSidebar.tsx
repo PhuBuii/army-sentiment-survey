@@ -42,8 +42,9 @@ export function AdminSidebar() {
           className="rounded-xl border border-white/10 shadow-md"
         />
         <div>
-          <h2 className="text-[13px] font-bold text-white leading-tight tracking-tight">Ban Chỉ Huy</h2>
-          <p className="text-[9px] text-slate-500 uppercase tracking-[0.12em] font-semibold mt-0.5">Army Survey</p>
+          <h2 className="text-[13px] font-bold text-white leading-tight tracking-tight">TÂM TƯ <span className="text-emerald-600 dark:text-emerald-500"> CHIẾN SĨ</span></h2>
+          <p className="text-[5px] text-slate-500 uppercase tracking-[0.12em] font-semibold mt-0.5">Hệ thống phân tích tâm lý chiến sĩ</p>
+
         </div>
       </div>
 

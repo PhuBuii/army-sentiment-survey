@@ -32,9 +32,9 @@ export function AdminMobileTopbar() {
                     backdrop-blur-xl shadow-sm">
       <div className="flex items-center gap-2.5">
         <Image src="/logo.png" alt="Logo" width={34} height={34} className="rounded-xl" />
-        <div>
-          <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-0.5">
-            Ban Chỉ Huy
+        <div className="hidden sm:block">
+          <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-0.5">
+           TÂM TƯ <span className="text-emerald-600 dark:text-emerald-500"> CHIẾN SĨ</span>
           </p>
           <h2 className="font-bold text-slate-900 dark:text-white text-[15px] leading-tight">
             {getPageName()}

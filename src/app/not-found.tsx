@@ -27,7 +27,7 @@ export default function NotFound() {
 
         <Link href="/" className="mt-4">
           <Button className="bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a3e635] dark:text-[#0c1109] dark:hover:bg-[#84cc16] px-8 h-12 text-base font-semibold shadow-lg shadow-emerald-500/20">
-            Trở về Sở Chỉ Huy
+            Trở về Trang Chủ
           </Button>
         </Link>
       </div>

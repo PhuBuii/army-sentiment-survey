@@ -64,7 +64,7 @@ export default function LandingPage() {
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-black tracking-tighter text-slate-900 dark:text-white uppercase leading-none">
-              ARMY<span className="text-emerald-600 dark:text-emerald-500">AI</span>
+              Tâm tư<span className="text-emerald-600 dark:text-emerald-500"> Chiến sĩ</span>
             </span>
             <span className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em] mt-1">
               Hệ thống Phân tích Tư tưởng
@@ -75,11 +75,6 @@ export default function LandingPage() {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <div className="h-6 w-px bg-slate-100 dark:bg-white/10 hidden sm:block" />
-          <Link href="/login">
-            <Button variant="ghost" className="hidden sm:flex text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-emerald-600 rounded-xl px-5 h-10">
-              Chỉ huy
-            </Button>
-          </Link>
           <Link href="/login">
             <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white rounded-xl px-6 h-10 text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-900/10 dark:shadow-emerald-900/20 transition-all active:scale-95 flex items-center gap-2 border-none">
               Đăng nhập <ArrowRight size={14} />
@@ -121,33 +116,13 @@ export default function LandingPage() {
         <div className="mt-12 flex flex-col sm:flex-row items-center gap-4">
           <Link href="/login">
             <Button size="lg" className="h-16 px-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95 border-none gap-3">
-              Vào sở chỉ huy <Terminal size={18} />
+           Truy cập ngay <Terminal size={18} />
             </Button>
           </Link>
-          <Button variant="outline" size="lg" className="h-16 px-10 rounded-2xl border-slate-200 dark:border-white/10 bg-transparent text-slate-600 dark:text-slate-400 font-black text-sm uppercase tracking-[0.1em] hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
-            Tìm hiểu thêm
-          </Button>
+          
         </div>
 
-        {/* Trust/Info Section */}
-        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-x-12 gap-y-8">
-          {[
-            { label: "Phân tích AI", value: "Real-time", icon: Brain },
-            { label: "Độ chính xác", value: "99.9%", icon: Zap },
-            { label: "Chuẩn bảo mật", value: "AES-256", icon: ShieldCheck },
-            { label: "Dữ liệu", value: "Centralized", icon: Database }
-          ].map((item, idx) => (
-            <div key={idx} className="flex flex-col items-center gap-2 group">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors border border-slate-100 dark:border-white/5">
-                <item.icon size={20} />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-black text-slate-900 dark:text-white leading-none">{item.value}</span>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">{item.label}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+        
       </section>
 
       {/* ══ FEATURES GRID ═══════════════════════════════════════════════════════ */}
@@ -190,8 +165,7 @@ export default function LandingPage() {
           </h2>
           <div className="mt-10 flex flex-col items-center">
             <div className="w-16 h-1 bg-emerald-600 dark:bg-emerald-500 mb-4 rounded-full" />
-            <span className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Ban Chỉ Huy Kỹ Thuật</span>
-            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-600 uppercase mt-1">Intelligence Division</span>
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-600 uppercase mt-1">Ứng dụng AI nắm bắt tâm lý của chiến sĩ</span>
           </div>
         </div>
       </section>

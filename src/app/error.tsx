@@ -51,7 +51,7 @@ export default function Error({
           </Button>
           <Link href="/" className="flex-1">
             <Button className="w-full h-12 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/20">
-              Về Sở Chỉ Huy
+              Về Trang Chủ
             </Button>
           </Link>
         </div>
