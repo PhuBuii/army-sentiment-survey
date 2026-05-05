@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { read, utils } from "xlsx";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
-import { toast } from "sonner";
+import { toast, Id } from "react-toastify";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -192,7 +192,7 @@ function SoldiersContent() {
   const copyLink = (token: string) => {
     const url = `${window.location.origin}/survey/${token}`;
     navigator.clipboard.writeText(url);
-    toast.success("Đã sao chép link!", { description: url });
+    toast.success(`Đã sao chép link! ${url}`);
   };
 
   const handleCreateOrUpdateSoldier = async () => {
@@ -244,8 +244,8 @@ function SoldiersContent() {
 
   const handleExportQRExcel = async () => {
     const pendingList = soldiers.filter(s => !s.is_completed);
-    if (pendingList.length === 0) { toast.warning("Tất cả chiến sĩ đã nộp bài."); return; }
-    const toastId = toast.loading(`Đang tạo QR cho ${pendingList.length} chiến sĩ...`);
+    if (pendingList.length === 0) { toast.warn("Tất cả chiến sĩ đã nộp bài."); return; }
+    const toastId: Id = toast.loading(`Đang tạo QR cho ${pendingList.length} chiến sĩ...`);
     try {
       const workbook = new ExcelJS.Workbook();
       const sheet = workbook.addWorksheet("DS Khao Sat", { views: [{ state: 'frozen', ySplit: 1 }] });
@@ -276,8 +276,8 @@ function SoldiersContent() {
       const a = document.createElement("a"); a.href = url;
       a.download = `QR_KhaoSat_${new Date().toISOString().slice(0,10)}.xlsx`;
       a.click(); URL.revokeObjectURL(url);
-      toast.success("Xuất file Excel thành công!", { id: toastId });
-    } catch (err) { console.error(err); toast.error("Lỗi tạo Excel.", { id: toastId }); }
+      toast.update(toastId, { render: "Xuất file Excel thành công!", type: "success", isLoading: false, autoClose: 3000 });
+    } catch (err) { console.error(err); toast.update(toastId, { render: "Lỗi tạo Excel.", type: "error", isLoading: false, autoClose: 3000 }); }
   };
 
   return (

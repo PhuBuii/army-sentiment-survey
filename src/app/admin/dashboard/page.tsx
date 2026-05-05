@@ -31,7 +31,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, 
   Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid 
 } from "recharts";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import Link from "next/link";
 import { Pagination } from "@/components/ui/pagination";
 import { useSearchParams } from "next/navigation";

@@ -15,7 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { updatePasswordAction, updateProfileAction, uploadAvatarAction } from "@/app/actions/admin-actions";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
 import { logout } from "@/app/login/actions";

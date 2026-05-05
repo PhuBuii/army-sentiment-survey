@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MessageSquarePlus, Send, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 
 export function FeedbackModal({ children }: { children: React.ReactElement }) {
   const [feedback, setFeedback] = useState("");

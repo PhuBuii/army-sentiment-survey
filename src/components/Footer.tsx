@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { MessageSquare, Send, ShieldCheck, Globe, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 
 export function Footer() {
   const [feedback, setFeedback] = useState("");

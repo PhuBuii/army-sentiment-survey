@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "sonner";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import NextTopLoader from 'nextjs-toploader';
 
 
@@ -54,7 +55,7 @@ export default function RootLayout({
         >
           <NextTopLoader color="#8b5cf6" height={3} showSpinner={false} />
           {children}
-          <Toaster position="bottom-right" richColors />
+          <ToastContainer position="bottom-right" theme="colored" />
         </ThemeProvider>
       </body>
     </html>
