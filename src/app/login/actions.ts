@@ -4,17 +4,42 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
 export async function login(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const supabase = await createClient();
+  let errorMessage = "Đã có lỗi xảy ra. Vui lòng thử lại sau.";
+  let hasError = false;
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  try {
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
-  if (error) {
-    return redirect("/login?message=Không thể đăng nhập. Hãy kiểm tra lại tài khoản hoặc mật khẩu.");
+    if (!email || !password) {
+      errorMessage = "Vui lòng nhập đầy đủ email và mật khẩu.";
+      hasError = true;
+    } else {
+      const supabase = await createClient();
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        hasError = true;
+        if (error.message.includes("Invalid login credentials")) {
+          errorMessage = "Tài khoản hoặc mật khẩu không chính xác.";
+        } else if (error.message.includes("Email rate limit exceeded") || error.status === 429) {
+          errorMessage = "Bạn đã đăng nhập sai quá nhiều lần. Vui lòng đợi một lát rồi thử lại.";
+        } else {
+          errorMessage = "Đăng nhập thất bại. Vui lòng kiểm tra lại!";
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    hasError = true;
+  }
+
+  if (hasError) {
+    return redirect(`/login?message=${encodeURIComponent(errorMessage)}`);
   }
 
   return redirect("/admin/dashboard");
