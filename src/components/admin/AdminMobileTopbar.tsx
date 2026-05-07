@@ -29,7 +29,7 @@ export function AdminMobileTopbar() {
   return (
     <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3
                     bg-white/95 dark:bg-[#161b22]/98 border-b border-slate-200/60 dark:border-white/8
-                    backdrop-blur-xl shadow-sm">
+                    backdrop-blur-xl shadow-sm print:hidden">
       <div className="flex items-center gap-2.5">
         <Image src="/logo.png" alt="Logo" width={34} height={34} className="rounded-xl" />
         <div className="hidden sm:block">

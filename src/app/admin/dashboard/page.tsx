@@ -70,6 +70,7 @@ function DashboardContent() {
   const [chartData, setChartData] = useState<{name: string, value: number}[]>([]);
   const [trendData, setTrendData] = useState<{date: string, score: number}[]>([]);
   const [recentSoldiers, setRecentSoldiers] = useState<Soldier[]>([]);
+  const [pendingSoldiers, setPendingSoldiers] = useState<Soldier[]>([]);
   
   const [selectedSoldier, setSelectedSoldier] = useState<Soldier | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -77,10 +78,35 @@ function DashboardContent() {
 
   const [units, setUnits] = useState<string[]>([]);
   const [selectedUnit, setSelectedUnit] = useState<string>("all");
+  const [printLocation, setPrintLocation] = useState("Thành phố Hồ Chí Minh");
 
   const searchParams = useSearchParams();
   const currentPage = parseInt(searchParams.get("page") || "1", 10);
   const ITEMS_PER_PAGE = 10;
+
+  useEffect(() => {
+    fetch("https://ipapi.co/json/")
+      .then(r => r.json())
+      .then(data => {
+        if (data.city) {
+          const cityMap: Record<string, string> = {
+            "Ho Chi Minh City": "Thành phố Hồ Chí Minh",
+            "Hanoi": "Hà Nội",
+            "Da Nang": "Đà Nẵng",
+            "Can Tho": "Cần Thơ",
+            "Hai Phong": "Hải Phòng",
+            "Vung Tau": "Vũng Tàu",
+            "Bien Hoa": "Biên Hòa",
+            "Nha Trang": "Nha Trang",
+            "Hue": "Huế",
+            "Vinh": "Vinh",
+            "Quy Nhon": "Quy Nhơn",
+            "Da Lat": "Đà Lạt",
+          };
+          setPrintLocation(cityMap[data.city] || data.city);
+        }
+      }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
@@ -142,6 +168,12 @@ function DashboardContent() {
         .sort((a, b) => new Date(b.submissions![0].created_at).getTime() - new Date(a.submissions![0].created_at).getTime());
 
       setRecentSoldiers(recent);
+
+      const pending = [...filteredSoldiersData]
+        .filter(s => !s.is_completed)
+        .sort((a, b) => a.full_name.localeCompare(b.full_name));
+
+      setPendingSoldiers(pending);
     } catch (error) {
       console.error('Error fetching dashboard:', error);
     } finally {
@@ -221,19 +253,19 @@ function DashboardContent() {
       <div className="hidden print-only">
         <div className="flex justify-between items-start mb-10">
           <div className="text-center font-serif">
-            <p className="font-bold text-[13px] uppercase">HỆ THỐNG QUẢN LÝ TÂM LÝ</p>
-            <p className="text-[12px] font-bold underline underline-offset-4">ĐƠN VỊ: {selectedUnit === "all" ? "BỘ CHỈ HUY" : selectedUnit.toUpperCase()}</p>
+            <p className="font-bold text-[13px] uppercase">QUÂN KHU 7</p>
+            <p className="text-[12px] font-bold underline underline-offset-4">LỮ ĐOÀN 77</p>
           </div>
-          <div className="text-center font-serif">
+          <div className="text-center font-serif flex flex-col items-center">
             <p className="font-bold text-[13px] uppercase">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
             <p className="font-bold text-[14px]">Độc lập - Tự do - Hạnh phúc</p>
-            <div className="w-32 h-[1px] bg-black mx-auto mt-1"></div>
+            <div className="w-32 h-[1px] bg-black mt-0.5 mb-2"></div>
+            <p className="text-[14px] italic"><span contentEditable suppressContentEditableWarning className="outline-none border-b border-transparent hover:border-gray-300 focus:border-gray-400">{printLocation}</span>, ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}</p>
           </div>
         </div>
 
         <div className="text-center mb-10">
           <h1 className="text-2xl font-bold uppercase mb-2 font-serif">BÁO CÁO TỔNG HỢP TÌNH HÌNH TÂM LÝ CHIẾN SĨ</h1>
-          <p className="text-sm italic font-serif">Thời điểm: {new Date().toLocaleString('vi-VN')}</p>
         </div>
 
         <div className="mb-8">
@@ -287,10 +319,68 @@ function DashboardContent() {
           </table>
         </div>
 
+        <div className="mb-10">
+          <h2 className="text-lg font-bold uppercase mb-4 border-l-4 border-black pl-2 bg-slate-50 font-serif">III. Danh sách chi tiết chiến sĩ đã tham gia</h2>
+          <table className="w-full border-collapse border border-black font-serif">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="w-10 text-center">STT</th>
+                <th className="w-40">Họ và tên</th>
+                <th className="w-32 text-center">Đơn vị</th>
+                <th className="w-24 text-center">Trạng thái</th>
+                <th className="w-16 text-center">Điểm</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentSoldiers.length > 0 ? (
+                recentSoldiers.map((s, i) => (
+                  <tr key={s.id}>
+                    <td className="text-center">{i + 1}</td>
+                    <td className="font-bold">{s.full_name.toUpperCase()}</td>
+                    <td className="text-center">{s.unit}</td>
+                    <td className="text-center font-bold">{s.submissions?.[0]?.ai_status}</td>
+                    <td className="text-center font-bold">{s.submissions?.[0]?.ai_score}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan={5} className="text-center py-4 italic">Chưa có chiến sĩ nào hoàn thành khảo sát.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mb-10">
+          <h2 className="text-lg font-bold uppercase mb-4 border-l-4 border-black pl-2 bg-slate-50 font-serif">IV. Danh sách chiến sĩ chưa tham gia khảo sát</h2>
+          <table className="w-full border-collapse border border-black font-serif">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="w-10 text-center">STT</th>
+                <th className="w-64">Họ và tên</th>
+                <th className="w-48 text-center">Đơn vị</th>
+                <th className="text-center">Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingSoldiers.length > 0 ? (
+                pendingSoldiers.map((s, i) => (
+                  <tr key={s.id}>
+                    <td className="text-center">{i + 1}</td>
+                    <td className="font-bold">{s.full_name.toUpperCase()}</td>
+                    <td className="text-center">{s.unit}</td>
+                    <td className="text-center italic text-slate-500">Chưa làm bài</td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan={4} className="text-center py-4 italic">Toàn bộ chiến sĩ đã hoàn thành khảo sát.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
         <div className="mt-12 flex justify-end pr-10 font-serif">
           <div className="text-center">
-            <p className="mb-1 text-sm">.........., ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}</p>
-            <p className="font-bold uppercase mb-20">CÁN BỘ CHỈ HUY</p>
+            <p className="mb-1 text-sm"><span contentEditable suppressContentEditableWarning className="outline-none border-b border-transparent hover:border-gray-300 focus:border-gray-400">{printLocation}</span>, ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}</p>
+            <p className="font-bold uppercase ">CÁN BỘ CHỈ HUY</p>
             <p className="text-sm italic">(Ký và ghi rõ họ tên)</p>
           </div>
         </div>

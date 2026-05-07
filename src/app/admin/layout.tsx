@@ -15,9 +15,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <AdminSidebar />
 
       {/* ══ MAIN CONTENT ═══════════════════════════════════════════════════════ */}
-      <main className="flex-1 flex flex-col md:h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col md:h-screen overflow-hidden print:h-auto print:overflow-visible">
         <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6
-                        bg-slate-100 dark:bg-[#0d1117]">
+                        bg-slate-100 dark:bg-[#0d1117] print:overflow-visible print:p-0 print:bg-white dark:print:bg-white">
           {children}
         </div>
       </main>

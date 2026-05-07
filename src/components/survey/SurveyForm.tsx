@@ -689,8 +689,8 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
         )}
         
         {!isCompleted && (
-          <p className="text-xs text-slate-300 dark:text-slate-600 mt-3 font-mono flex items-center justify-between">
-            <span className="flex items-center gap-1.5"><kbd className="px-1.5 py-0.5 rounded border border-slate-200 dark:border-white/10 text-[10px]">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded border border-slate-200 dark:border-white/10 text-[10px]">Enter</kbd> để tiếp tục</span>
+          <p className="text-xs  text-slate-300 dark:text-slate-600 mt-3 font-mono flex items-center justify-between">
+            <span className="flex items-center gap-1.5 sm:block hidden"><kbd className="px-1.5 py-0.5 rounded border border-slate-200 dark:border-white/10 text-[10px]">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded border border-slate-200 dark:border-white/10 text-[10px]">Enter</kbd> để tiếp tục</span>
             {isChecking && <span className="flex items-center gap-1 text-emerald-600 dark:text-[#a3e635]"><DotPulse /> AI đang phân tích dữ liệu...</span>}
           </p>
         )}
@@ -730,7 +730,7 @@ export default function SurveyForm({ soldier, questions, token, isCompleted, pre
               disabled={!canNext || isChecking}
               className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl flex items-center gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 dark:bg-[#a3e635] dark:hover:bg-[#84cc16] text-white dark:text-[#0a0f08] disabled:opacity-40 disabled:cursor-not-allowed transition-all min-w-[120px] sm:min-w-[140px] justify-center shadow-md shadow-emerald-200 dark:shadow-[#a3e635]/20"
             >
-              {isChecking ? <DotPulse /> : <><Sparkles className="w-4 h-4" /> <span className="hidden sm:inline">Tiếp theo</span> <ArrowRight className="w-4 h-4" /></>}
+              {isChecking ? <DotPulse /> : <><Sparkles className="w-4 h-4" /> <span className="inline">Tiếp theo</span> <ArrowRight className="w-4 h-4" /></>}
             </button>
           )}
         </div>

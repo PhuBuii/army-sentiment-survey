@@ -33,7 +33,7 @@ export function AdminSidebar() {
 
   return (
     <aside className="hidden md:flex flex-col w-[240px] shrink-0
-                      bg-[#0f1419] dark:bg-[#0d1117] border-r border-white/[0.06] text-slate-300">
+                      bg-[#0f1419] dark:bg-[#0d1117] border-r border-white/[0.06] text-slate-300 print:hidden">
       {/* Brand */}
       <div className="px-6 h-16 border-b border-white/[0.06] flex items-center gap-3">
         <Image
