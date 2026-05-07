@@ -54,69 +54,69 @@ export default function LandingPage() {
       </div>
 
       {/* ══ NAVBAR ═══════════════════════════════════════════════════════════ */}
-      <header className="relative z-50 flex items-center justify-between px-6 md:px-12 h-20
+      <header className="relative z-50 flex items-center justify-between px-4 sm:px-6 md:px-12 h-16 sm:h-20
                           bg-white/70 dark:bg-[#0d1117]/70 backdrop-blur-xl
-                          border-b border-slate-100 dark:border-white/[0.05] transition-all">
-        <div className="flex items-center gap-3">
-          <div className="relative group">
+                          border-b border-slate-100 dark:border-white/[0.05] transition-all max-w-[1600px] w-full mx-auto">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="relative group shrink-0">
             <div className="absolute inset-0 bg-emerald-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all" />
-            <Image src="/logo.png" alt="Army AI Logo" width={40} height={40} className="relative rounded-xl border border-white/20 shadow-lg" />
+            <Image src="/logo.png" alt="Army AI Logo" width={40} height={40} className="size-10 sm:w-10 sm:h-10 relative rounded-xl border border-white/20 shadow-lg object-cover " />
           </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-black tracking-tighter text-slate-900 dark:text-white uppercase leading-none">
+          <div className="flex flex-col justify-center">
+            <span className="text-sm sm:text-lg hidden sm:block font-black tracking-tighter text-slate-900 dark:text-white uppercase leading-none whitespace-nowrap">
               Tâm tư<span className="text-emerald-600 dark:text-emerald-500"> Chiến sĩ</span>
             </span>
-            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em] mt-1">
+            <span className="text-[6.5px] hidden sm:block sm:text-[9px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-[0.1em] sm:tracking-[0.2em] mt-0.5 sm:mt-1 whitespace-nowrap truncate max-w-[120px] sm:max-w-none">
               Hệ thống Phân tích Tư tưởng
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <ThemeToggle />
           <div className="h-6 w-px bg-slate-100 dark:bg-white/10 hidden sm:block" />
           <Link href="/login">
-            <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white rounded-xl px-6 h-10 text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-900/10 dark:shadow-emerald-900/20 transition-all active:scale-95 flex items-center gap-2 border-none">
-              Đăng nhập <ArrowRight size={14} />
+            <Button className="bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white rounded-lg sm:rounded-xl px-3 sm:px-6 h-8 sm:h-10 text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-900/10 dark:shadow-emerald-900/20 transition-all active:scale-95 flex items-center gap-1.5 sm:gap-2 border-none">
+              <span>Đăng nhập</span> <ArrowRight size={14} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
           </Link>
         </div>
       </header>
 
       {/* ══ HERO SECTION ═══════════════════════════════════════════════════════ */}
-      <section className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-6 pt-24 pb-20">
+      <section className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 pt-16 sm:pt-24 pb-16 sm:pb-20">
         
         {/* Status Badge */}
-        <div className="group relative mb-10 cursor-default">
+        <div className="group relative mb-8 sm:mb-10 cursor-default">
           <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative flex items-center gap-2.5 px-5 py-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 shadow-sm">
-            <div className="relative flex h-2 w-2">
+          <div className="relative flex items-center gap-2 sm:gap-2.5 px-3 sm:px-5 py-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 shadow-sm max-w-[280px] sm:max-w-none mx-auto">
+            <div className="relative flex h-2 w-2 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </div>
-            <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-[0.2em]">
+            <span className="text-[8px] sm:text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-[0.1em] sm:tracking-[0.2em] leading-snug sm:leading-normal">
               Hệ thống bảo mật quân sự &middot; Hoạt động 24/7
             </span>
           </div>
         </div>
 
-        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.95] max-w-5xl">
-          <span className="text-slate-900 dark:text-white">Kỷ Luật Thép,</span>
-          <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 dark:from-emerald-400 dark:via-emerald-300 dark:to-teal-300">
+        <h1 className="text-[40px] sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.1] sm:leading-[0.95] max-w-5xl">
+          <span className="text-slate-900 dark:text-white block sm:inline">Kỷ Luật Thép,</span>
+          <br className="hidden sm:block" />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 dark:from-emerald-400 dark:via-emerald-300 dark:to-teal-300 block sm:inline mt-2 sm:mt-0">
             Tư Tưởng Vững
           </span>
         </h1>
 
-        <p className="mt-8 text-base md:text-xl text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed font-medium">
+        <p className="mt-6 sm:mt-8 text-sm sm:text-base md:text-xl text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed font-medium">
           Ứng dụng Trí tuệ nhân tạo tiên tiến trong việc đánh giá tâm lý và nắm bắt tư tưởng, đảm bảo tinh thần sẵn sàng chiến đấu cao nhất cho toàn quân.
         </p>
 
         {/* Action Buttons */}
-        <div className="mt-12 flex flex-col sm:flex-row items-center gap-4">
-          <Link href="/login">
-            <Button size="lg" className="h-16 px-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95 border-none gap-3">
-           Truy cập ngay <Terminal size={18} />
+        <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+          <Link href="/login" className="w-full sm:w-auto">
+            <Button size="lg" className="w-full sm:w-auto h-14 sm:h-16 px-8 sm:px-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm uppercase tracking-[0.2em] shadow-2xl shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95 border-none gap-3">
+              Truy cập ngay <Terminal size={18} />
             </Button>
           </Link>
           

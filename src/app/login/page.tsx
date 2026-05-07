@@ -46,7 +46,7 @@ export default function LoginPage({
           <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 group-hover:text-emerald-600 transition-all border border-slate-200 dark:border-white/10 group-hover:border-emerald-500/30">
             <ArrowLeft size={18} />
           </div>
-          <span className="text-sm font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white transition-colors uppercase tracking-widest">
+          <span className="text-sm font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white transition-colors hidden sm:block uppercase tracking-widest">
             Quay lại trang chủ
           </span>
         </Link>
@@ -56,7 +56,7 @@ export default function LoginPage({
           <div className="h-6 w-px bg-slate-100 dark:bg-white/10" />
           <div className="flex items-center gap-2">
             <Image src="/logo.png" alt="Logo" width={28} height={28} className="rounded-lg border border-white/20" />
-            <span className="text-xs font-black tracking-tighter text-slate-900 dark:text-white uppercase">
+            <span className="hidden sm:block text-xs font-black tracking-tighter text-slate-900 dark:text-white uppercase">
               Tâm tư<span className="text-emerald-600 dark:text-emerald-500"> Chiến sĩ</span>
             </span>
           </div>
