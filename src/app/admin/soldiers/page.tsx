@@ -192,7 +192,7 @@ function SoldiersContent() {
   const copyLink = (token: string) => {
     const url = `${window.location.origin}/survey/${token}`;
     navigator.clipboard.writeText(url);
-    toast.success(`Đã sao chép link! ${url}`);
+    toast.success(`Đã sao chép link!`);
   };
 
   const handleCreateOrUpdateSoldier = async () => {
