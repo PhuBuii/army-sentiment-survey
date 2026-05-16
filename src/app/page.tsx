@@ -100,7 +100,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <h1 className="text-[40px] sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.1] sm:leading-[0.95] max-w-5xl">
+        <h1 className="text-[40px] sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[1.1] sm:leading-[1.05] max-w-5xl">
           <span className="text-slate-900 dark:text-white block sm:inline">Kỷ Luật Thép,</span>
           <br className="hidden sm:block" />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 dark:from-emerald-400 dark:via-emerald-300 dark:to-teal-300 block sm:inline mt-2 sm:mt-0">

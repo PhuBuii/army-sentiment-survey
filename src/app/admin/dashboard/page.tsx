@@ -269,7 +269,7 @@ function DashboardContent() {
         </div>
 
         <div className="mb-8">
-          <h2 className="text-lg font-bold uppercase mb-4 border-l-4 border-black pl-2 bg-slate-50 font-serif">I. Thống kê chung</h2>
+          <h2 className="text-lg font-bold uppercase mb-4  bg-slate-50 font-serif">I. Thống kê chung</h2>
           <div className="grid grid-cols-3 gap-6 mb-4">
             <div className="border border-black p-4 text-center">
               <p className="text-[11px] uppercase font-bold">Tổng quân số</p>
@@ -287,7 +287,7 @@ function DashboardContent() {
         </div>
 
         <div className="mb-10">
-          <h2 className="text-lg font-bold uppercase mb-4 border-l-4 border-black pl-2 bg-slate-50 font-serif">II. Danh sách trọng điểm</h2>
+          <h2 className="text-lg font-bold uppercase mb-4  bg-slate-50 font-serif">II. Danh sách trọng điểm</h2>
           <table className="w-full border-collapse border border-black font-serif">
             <thead>
               <tr className="bg-slate-100">
@@ -320,7 +320,7 @@ function DashboardContent() {
         </div>
 
         <div className="mb-10">
-          <h2 className="text-lg font-bold uppercase mb-4 border-l-4 border-black pl-2 bg-slate-50 font-serif">III. Danh sách chi tiết chiến sĩ đã tham gia</h2>
+          <h2 className="text-lg font-bold uppercase mb-4  bg-slate-50 font-serif">III. Danh sách chi tiết chiến sĩ đã tham gia</h2>
           <table className="w-full border-collapse border border-black font-serif">
             <thead>
               <tr className="bg-slate-100">
@@ -350,7 +350,7 @@ function DashboardContent() {
         </div>
 
         <div className="mb-10">
-          <h2 className="text-lg font-bold uppercase mb-4 border-l-4 border-black pl-2 bg-slate-50 font-serif">IV. Danh sách chiến sĩ chưa tham gia khảo sát</h2>
+          <h2 className="text-lg font-bold uppercase mb-4  bg-slate-50 font-serif">IV. Danh sách chiến sĩ chưa tham gia khảo sát</h2>
           <table className="w-full border-collapse border border-black font-serif">
             <thead>
               <tr className="bg-slate-100">
@@ -561,7 +561,15 @@ function DashboardContent() {
                   <TableBody>
                     {paginatedSoldiers.length === 0 ? (
                       <TableRow>
-                         <TableCell colSpan={5} className="h-40 text-center text-slate-400 dark:text-slate-500 text-sm italic">Chưa có bài khảo sát nào được hoàn thành.</TableCell>
+                         <TableCell colSpan={5} className="h-48 text-center">
+                            <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 space-y-3">
+                              <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center">
+                                <Activity className="w-6 h-6 opacity-50" />
+                              </div>
+                              <p className="text-sm font-medium">Chưa có bài khảo sát nào được hoàn thành.</p>
+                              <p className="text-xs opacity-70">Dữ liệu sẽ xuất hiện tại đây khi có kết quả mới.</p>
+                            </div>
+                         </TableCell>
                       </TableRow>
                     ) : (
                       paginatedSoldiers.map((soldier, idx) => {

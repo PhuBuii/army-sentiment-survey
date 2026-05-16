@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS public.submissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     soldier_id UUID NOT NULL REFERENCES public.soldiers(id) ON DELETE CASCADE,
     responses JSONB NOT NULL,
+    processing_status TEXT CHECK (processing_status IN ('pending', 'completed', 'failed')) DEFAULT 'pending',
     ai_score INTEGER CHECK (ai_score >= 0 AND ai_score <= 100),
     ai_status TEXT CHECK (ai_status IN ('An tâm', 'Dao động', 'Nguy cơ')),
     ai_summary TEXT,
@@ -48,6 +49,10 @@ CREATE TABLE IF NOT EXISTS public.submissions (
     is_resolved BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- 5.1. MIGRATION: Đảm bảo thêm cột processing_status nếu bảng đã tồn tại trước đó
+ALTER TABLE public.submissions 
+ADD COLUMN IF NOT EXISTS processing_status TEXT CHECK (processing_status IN ('pending', 'completed', 'failed')) DEFAULT 'pending';
 
 -- 6. Table: App Settings (Dynamic Config)
 CREATE TABLE IF NOT EXISTS public.app_settings (
