@@ -16,7 +16,7 @@ export function AdminMobileNav() {
       className="md:hidden fixed bottom-4 inset-x-4 z-40 bg-white/80 dark:bg-[#161b22]/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden print:hidden"
       style={{ marginBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="grid grid-cols-4 h-16">
+      <div className="grid grid-cols-5 h-16">
         {navItems.map((item) => {
           const active = isActive(item.href);
           return (

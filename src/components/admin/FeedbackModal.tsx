@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { MessageSquarePlus, Send, ShieldCheck } from "lucide-react";
 import { toast } from "react-toastify";
+import { sendFeedbackAction } from "@/app/actions/admin-actions";
 
 export function FeedbackModal({ children }: { children: React.ReactElement }) {
   const [feedback, setFeedback] = useState("");
@@ -27,12 +28,16 @@ export function FeedbackModal({ children }: { children: React.ReactElement }) {
     }
 
     setSending(true);
-    // Simulate sending
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const res = await sendFeedbackAction(feedback);
     setSending(false);
-    setOpen(false);
-    setFeedback("");
-    toast.success("Góp ý của đồng chí đã được ghi nhận. Cảm ơn đồng chí!");
+
+    if (res.error) {
+      toast.error(res.error);
+    } else {
+      setOpen(false);
+      setFeedback("");
+      toast.success("Góp ý của đồng chí đã được gửi trực tiếp đến chủ nhân hệ thống. Cảm ơn đồng chí!");
+    }
   };
 
   return (

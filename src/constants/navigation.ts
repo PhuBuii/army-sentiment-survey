@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  LayoutDashboard, UsersRound, HelpCircle, UserCog
+  LayoutDashboard, UsersRound, HelpCircle, UserCog, Building2
 } from "lucide-react";
 
 export const navItems = [
@@ -44,6 +44,20 @@ export const navItems = [
     sidebarIcon:  "text-amber-400",
     sidebarDot:   "bg-amber-400",
   },
+  {
+    name: "Đơn vị",
+    href: "/admin/units",
+    icon: Building2,
+    color: "indigo",
+    activeText:   "text-indigo-600 dark:text-indigo-400",
+    activeBg:     "bg-indigo-500/10 dark:bg-indigo-400/10",
+    activeBorder: "border-indigo-500/20 dark:border-indigo-400/20",
+    activeBar:    "bg-indigo-500 dark:bg-indigo-400",
+    sidebarActive:"bg-indigo-500/15 text-indigo-300 border-indigo-500/25",
+    sidebarIcon:  "text-indigo-400",
+    sidebarDot:   "bg-indigo-400",
+  },
+
   {
     name: "Tài khoản",
     href: "/admin/accounts",

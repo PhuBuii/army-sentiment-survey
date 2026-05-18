@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -34,9 +34,11 @@ import {
   updateSoldier,
   deleteSoldiers,
   resetSoldierSurvey,
+  getUnits,
 } from "@/app/actions/admin-actions";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ExcelUploadDialog } from "@/components/ui/ExcelUploadDialog";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import {
   ClipboardCopy,
   Loader2,
@@ -83,24 +85,7 @@ type Soldier = {
 const STATUS_OPTIONS = ["An tâm", "Dao động", "Nguy cơ"] as const;
 type Status = (typeof STATUS_OPTIONS)[number];
 
-const statusColor: Record<Status, string> = {
-  "An tâm":
-    "bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border dark:border-emerald-500/50",
-  "Dao động":
-    "bg-amber-500 hover:bg-amber-600 dark:bg-amber-500/20 dark:text-amber-400 dark:border dark:border-amber-500/50",
-  "Nguy cơ":
-    "bg-red-500 hover:bg-red-600 dark:bg-red-500/20 dark:text-red-400 dark:border dark:border-red-500/50",
-};
 
-function StatusBadge({ status }: { status: string }) {
-  return (
-    <Badge
-      className={`text-xs text-white font-semibold ${statusColor[status as Status] ?? "bg-slate-400"}`}
-    >
-      {status}
-    </Badge>
-  );
-}
 
 function SoldiersContent() {
   const [soldiers, setSoldiers] = useState<Soldier[]>([]);
@@ -124,6 +109,7 @@ function SoldiersContent() {
   const [newAdminNote, setNewAdminNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [availableUnits, setAvailableUnits] = useState<string[]>([]);
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,6 +139,11 @@ function SoldiersContent() {
         console.error(error);
         setSoldiers([]);
       } else setSoldiers((data as Soldier[]) || []);
+      
+      const resUnits = await getUnits();
+      if (resUnits?.units) {
+        setAvailableUnits(resUnits.units);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -506,7 +497,7 @@ function SoldiersContent() {
 
       {/* Table */}
       <Card className="shadow-sm border-slate-200 dark:border-white/8 bg-white dark:bg-[#161b22] overflow-hidden">
-        <CardHeader className="bg-slate-50/80 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/8 py-3 px-4">
+        <CardHeader className="bg-slate-50/80 dark:bg-white/3 border-b border-slate-100 dark:border-white/8 py-3 px-4">
           <CardTitle className="text-sm font-semibold text-slate-600 dark:text-slate-400 flex items-center justify-between">
             <span>
               {filteredSoldiers.length} / {soldiers.length} chiến sĩ
@@ -694,12 +685,21 @@ function SoldiersContent() {
               <Label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Đơn vị
               </Label>
-              <Input
-                placeholder="Đại đội 1"
-                value={editUnit}
-                onChange={(e) => setEditUnit(e.target.value)}
-                className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10"
-              />
+              {availableUnits.length > 0 ? (
+                <CustomSelect
+                  value={editUnit}
+                  onChange={setEditUnit}
+                  options={availableUnits.map((u) => ({ label: u, value: u }))}
+                  placeholder="-- Chọn đơn vị --"
+                />
+              ) : (
+                <Input
+                  placeholder="Đại đội 1 (Vui lòng thêm trong Quản lý đơn vị)"
+                  value={editUnit}
+                  onChange={(e) => setEditUnit(e.target.value)}
+                  className="h-10 text-sm rounded-xl bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10"
+                />
+              )}
             </div>
             <div className="flex gap-2 pt-1">
               <Button
@@ -952,82 +952,107 @@ function SoldiersContent() {
           if (!v) setConfirmResetName("");
         }}
       >
-        <DialogContent className="sm:max-w-[520px] border-none shadow-2xl overflow-hidden p-0 rounded-2xl dark:bg-[#0a0f08]">
-          <div className="p-6">
+        <DialogContent className="sm:max-w-[560px] border-none shadow-2xl overflow-hidden p-0 rounded-3xl dark:bg-[#0a0f08]">
+          <div className="p-6 sm:p-7 space-y-6">
             <div className="flex items-start gap-4">
-              <div className="p-3 rounded-2xl shrink-0 bg-red-50 dark:bg-red-500/10">
-                <Trash2 className="w-6 h-6 text-red-500" />
+              <div className="shrink-0 rounded-2xl bg-red-50 p-3 ring-1 ring-red-100 dark:bg-red-500/10 dark:ring-red-500/20">
+                <Trash2 className="h-6 w-6 text-red-500" />
               </div>
-              <div className="space-y-3 flex-1">
-                <DialogHeader className="p-0 text-left">
-                  <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
+              <div className="min-w-0 flex-1 space-y-2">
+                <DialogHeader className="p-0 text-left space-y-1">
+                  <DialogTitle className="text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
                     Xác nhận reset khảo sát
                   </DialogTitle>
-                  <DialogDescription className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Hành động này sẽ xóa toàn bộ kết quả khảo sát, điểm AI và
-                    ghi chú hiện tại của chiến sĩ. Việc hoàn tác là không thể.
+                  <DialogDescription className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                    Hành động này sẽ xoá toàn bộ kết quả khảo sát, điểm AI và
+                    ghi chú hiện tại của chiến sĩ. Không thể hoàn tác sau khi
+                    xác nhận.
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-white/[0.03] rounded-xl p-3 border border-slate-100 dark:border-white/8">
-                  <p className="mb-2">
-                    Chiến sĩ: <strong>{selected?.full_name}</strong>
-                  </p>
-                  <p className="mb-0 text-xs text-slate-500">
-                    Để xác nhận, vui lòng nhập chính xác tên chiến sĩ vào ô bên
-                    dưới và nhấn "Reset và Xoá dữ liệu".
-                  </p>
-                </div>
-
-                <div>
-                  <input
-                    value={confirmResetName}
-                    onChange={(e) => setConfirmResetName(e.target.value)}
-                    placeholder="Nhập tên chiến sĩ để xác nhận"
-                    className="w-full p-3 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-sm outline-none"
-                  />
+                <div className="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-100 dark:bg-red-500/10 dark:text-red-200 dark:ring-red-500/20">
+                  Thao tác nguy hiểm
                 </div>
               </div>
             </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 text-sm text-slate-700 shadow-sm dark:border-white/8 dark:bg-white/[0.03] dark:text-slate-300">
+              <p className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                Chiến sĩ cần reset
+              </p>
+              <p className="text-base font-semibold text-slate-900 dark:text-white">
+                {selected?.full_name}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                Nhập đúng họ tên bên dưới để mở khoá nút reset.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="confirm-reset-name"
+                className="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                Nhập tên chiến sĩ để xác nhận
+              </label>
+              <input
+                id="confirm-reset-name"
+                value={confirmResetName}
+                onChange={(e) => setConfirmResetName(e.target.value)}
+                placeholder="Ví dụ: Nguyễn Văn A"
+                autoComplete="off"
+                spellCheck={false}
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-red-300 focus:ring-4 focus:ring-red-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-red-400/70 dark:focus:ring-red-500/10"
+              />
+            </div>
           </div>
 
-          <DialogFooter className="bg-slate-50/50 dark:bg-white/5 p-4 sm:p-6 flex flex-row gap-3 items-center justify-end">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setIsResetConfirmOpen(false);
-                setConfirmResetName("");
-              }}
-              disabled={isResetting}
-              className="flex-1 sm:flex-none font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl h-11 transition-all"
-            >
-              Huỷ
-            </Button>
-            <Button
-              onClick={async (e) => {
-                e.preventDefault();
-                if (!selected) return;
-                if (confirmResetName.trim() !== selected.full_name) {
-                  toast.error("Tên xác nhận không khớp.");
-                  return;
+          <DialogFooter className="border-t border-slate-100 bg-slate-50/70 p-4 sm:p-6 dark:border-white/8 dark:bg-white/5">
+            <div className="flex w-full flex-col-reverse gap-3 p-4 sm:p-6 pt-0! sm:flex-row sm:items-center sm:justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setIsResetConfirmOpen(false);
+                  setConfirmResetName("");
+                }}
+                disabled={isResetting}
+                className="w-full min-h-12 rounded-xl px-5 py-3 font-medium text-slate-600 transition-all hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5 sm:w-auto"
+              >
+                Huỷ
+              </Button>
+              <Button
+                type="button"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (!selected) return;
+                  if (confirmResetName.trim() !== selected.full_name) {
+                    toast.error("Tên xác nhận không khớp.");
+                    return;
+                  }
+                  await handleResetSurvey();
+                }}
+                disabled={
+                  isResetting ||
+                  confirmResetName.trim() !== (selected?.full_name ?? "")
                 }
-                await handleResetSurvey();
-              }}
-              disabled={
-                isResetting ||
-                confirmResetName.trim() !== (selected?.full_name ?? "")
-              }
-              className={`flex-1 sm:flex-none font-bold rounded-xl h-11 px-6 transition-all active:scale-[0.98] bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/20`}
-            >
-              {isResetting ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Đang reset...</span>
-                </div>
-              ) : (
-                "Reset và Xoá dữ liệu"
-              )}
-            </Button>
+                className={`w-full min-h-12 rounded-xl px-6 py-3 font-bold transition-all active:scale-[0.98] bg-red-600 text-white shadow-lg shadow-red-500/20 hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-55 ${
+                  isResetting ||
+                  confirmResetName.trim() !== (selected?.full_name ?? "")
+                    ? "opacity-60 cursor-not-allowed"
+                    : ""
+                }`}
+              >
+                {isResetting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Đang reset...</span>
+                  </div>
+                ) : (
+                  "Reset và xoá dữ liệu"
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

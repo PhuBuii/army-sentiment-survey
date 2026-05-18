@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { navItems } from "@/constants/navigation";
 import { FeedbackModal } from "./FeedbackModal";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function AdminSidebar() {
@@ -35,17 +36,19 @@ export function AdminSidebar() {
     <aside className="hidden md:flex flex-col w-[240px] shrink-0
                       bg-[#0f1419] dark:bg-[#0d1117] border-r border-white/[0.06] text-slate-300 print:hidden">
       {/* Brand */}
-      <div className="px-6 h-16 border-b border-white/[0.06] flex items-center gap-3">
-        <Image
-          src="/logo.png" alt="Logo"
-          width={38} height={38}
-          className="rounded-xl border border-white/10 shadow-md"
-        />
-        <div>
-          <h2 className="text-[13px] font-bold text-white leading-tight tracking-tight">TÂM TƯ <span className="text-emerald-600 dark:text-emerald-500"> CHIẾN SĨ</span></h2>
-          <p className="text-[5px] text-slate-500 uppercase tracking-[0.12em] font-semibold mt-0.5">Hệ thống phân tích tâm lý chiến sĩ</p>
-
+      <div className="px-4 h-16 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Image
+            src="/logo.png" alt="Logo"
+            width={38} height={38}
+            className="rounded-xl border border-white/10 shadow-md"
+          />
+          <div>
+            <h2 className="text-[13px] font-bold text-white leading-tight tracking-tight">TÂM TƯ <span className="text-emerald-600 dark:text-emerald-500"> CHIẾN SĨ</span></h2>
+            <p className="text-[5px] text-slate-500 uppercase tracking-[0.12em] font-semibold mt-0.5">Hệ thống phân tích tâm lý<br/>chiến sĩ</p>
+          </div>
         </div>
+        <ThemeToggle />
       </div>
 
       {/* Nav */}

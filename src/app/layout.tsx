@@ -53,7 +53,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <NextTopLoader color="#8b5cf6" height={3} showSpinner={false} />
+          <NextTopLoader color="#2563eb" height={3} showSpinner={false} />
           {children}
           <ToastContainer position="bottom-right" theme="colored" />
         </ThemeProvider>

@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import nodemailer from "nodemailer";
 
 // Helper to get admin client
 function getAdminClient() {
@@ -353,4 +354,91 @@ export async function resetSoldierSurvey(soldierId: string) {
   }
 }
 
+// ── Units Management ─────────────────────────────────────────────────────────
+export async function getUnits() {
+  const supabase = await createClient();
+  let units: string[] = [];
 
+  const { data, error } = await supabase.from('app_settings').select('value').eq('id', 'units').single();
+  
+  if (!error && data) {
+    try {
+      units = JSON.parse(data.value) as string[];
+    } catch (e) {}
+  }
+
+  // Auto-sync with existing soldiers' units to ensure no data is left behind
+  const { data: soldiersData } = await supabase.from('soldiers').select('unit');
+  let hasNewUnits = false;
+
+  if (soldiersData && soldiersData.length > 0) {
+    const existingSoldierUnits = Array.from(new Set(soldiersData.map((s) => s.unit))).filter(Boolean);
+    for (const u of existingSoldierUnits) {
+      if (!units.includes(u)) {
+        units.push(u);
+        hasNewUnits = true;
+      }
+    }
+  }
+
+  // If we found new units from the soldiers table, save them back to app_settings
+  if (hasNewUnits || (!data && units.length > 0)) {
+    await supabase.from('app_settings').upsert({ id: 'units', value: JSON.stringify(units) });
+  }
+
+  return { units };
+}
+
+export async function saveUnits(units: string[]) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('app_settings').upsert({ id: 'units', value: JSON.stringify(units) });
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+// ── Feedback / Contributions ──────────────────────────────────────────────────
+export async function sendFeedbackAction(content: string) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const userName = user?.user_metadata?.full_name || user?.email || "Một sĩ quan";
+
+    const email = process.env.SMTP_EMAIL;
+    const pass = process.env.SMTP_PASSWORD;
+
+    if (!email || !pass) {
+      return { 
+        error: "Tính năng gửi mail chưa được cấu hình. Vui lòng thiết lập SMTP_EMAIL và SMTP_PASSWORD trong file .env.local"
+      };
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: email,
+        pass: pass,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `Tâm Tư Chiến Sĩ <${email}>`,
+      to: email, // Send directly to the configured email (the owner)
+      subject: `[Tâm Tư Chiến Sĩ] Góp ý hệ thống từ ${userName}`,
+      html: `
+        <h2 style="color: #047857;">Có một góp ý phát triển mới cho hệ thống</h2>
+        <p><strong>Người gửi:</strong> ${userName}</p>
+        <p><strong>Nội dung:</strong></p>
+        <div style="padding: 15px; background-color: #f8fafc; border-left: 4px solid #10b981; border-radius: 4px; font-size: 14px; line-height: 1.5;">
+          ${content.replace(/\n/g, "<br />")}
+        </div>
+        <br />
+        <p style="color: #64748b; font-size: 12px;">Email này được gửi tự động từ hệ thống Tâm Tư Chiến Sĩ.</p>
+      `,
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}

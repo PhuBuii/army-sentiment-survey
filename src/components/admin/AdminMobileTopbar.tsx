@@ -22,6 +22,7 @@ export function AdminMobileTopbar() {
     if (last === "soldiers") return "Chiến sĩ";
     if (last === "questions") return "Câu hỏi";
     if (last === "accounts") return "Tài khoản";
+    if (last === "units") return "Đơn vị";
     if (last === "profile") return "Hồ sơ";
     return "Hệ thống";
   };
